@@ -1,5 +1,7 @@
 # Code Style Patterns in the Go Standard Library
 
+
+**Source:** [golang/go](https://github.com/golang/go) at commit [`17bd5ab`](https://github.com/golang/go/tree/17bd5ab8c650155dd2bd09f7005726552639eea0)
 ## 1. Naming Conventions: mixedCaps (No Underscores)
 
 **Pattern name:** mixedCaps / MixedCaps
@@ -34,7 +36,7 @@ const shutdownPollIntervalMax = 500 * time.Millisecond
 
 **Pattern name:** Acronym Capitalization
 
-**Source citation:** `net/http/request.go` line 130 (`URL`), `net/http/server.go` line 3041 (`TLSConfig`), `encoding/json/stream.go` line 280 (`JSON`)
+**Source citation:** [net/http/request.go#L130](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/request.go#L130) (`URL`), [net/http/server.go#L3041](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L3041) (`TLSConfig`), [encoding/json/stream.go#L280](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/stream.go#L280) (`JSON`)
 
 **What it does:** Acronyms and initialisms (URL, HTTP, ID, JSON, XML, HTML, TLS, TCP)
 are always fully capitalized when exported, and fully lowercased when unexported.
@@ -101,7 +103,7 @@ pattern.go       — URL pattern matching (ServeMux routing)
 
 **Pattern name:** `var _ Interface = (*Type)(nil)`
 
-**Source citation:** `io/io.go` line 645, `os/file.go` lines 747–750, `encoding/json/stream.go` lines 280–281
+**Source citation:** [io/io.go#L645](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L645), [os/file.go#L747](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L747), [encoding/json/stream.go#L280](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/stream.go#L280)
 
 **What it does:** A package-level `var _ InterfaceName = (*ConcreteType)(nil)` declares
 that the concrete type must satisfy the interface. The compiler verifies this at
@@ -193,7 +195,7 @@ var _ Pusher = (*timeoutWriter)(nil)
 
 **Pattern name:** Named Returns for Documentation (and Defer)
 
-**Source citation:** `io/io.go` lines 87, 100, 314, 387; `os/file.go` lines 140, 175
+**Source citation:** [io/io.go#L87](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L87), 100, 314, 387; [os/file.go#L140](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L140), 175
 
 **What it does:** Return values are given names when the names add documentary value
 (clarifying which int is what) or when `defer` needs to modify the return value.
@@ -239,7 +241,7 @@ func (f *File) Read(b []byte) (n int, err error) {
 
 **Pattern name:** `defer mu.Unlock()` / `defer f.Close()`
 
-**Source citation:** `net/http/server.go` lines 3173–3174, `net/http/example_handle_test.go` lines 21–22
+**Source citation:** [net/http/server.go#L3173](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L3173), [net/http/example_handle_test.go#L21](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/example_handle_test.go#L21)
 
 **What it does:** Resources acquired at the top of a scope are immediately deferred
 for cleanup. Mutexes are locked then immediately `defer Unlock()`'d.
@@ -277,7 +279,7 @@ func (h *countHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 **Pattern name:** Sentinel Errors + Structured Error Types
 
-**Source citation:** `os/error.go` lines 14–27, `os/error.go` lines 46–67
+**Source citation:** [os/error.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/error.go#L14), [os/error.go#L46](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/error.go#L46)
 
 **What it does:** Package-level sentinel errors (`ErrNotExist`, `ErrPermission`) are
 declared as `var` for use with `errors.Is()`. Structured error types (`*PathError`,
@@ -357,7 +359,7 @@ func (f *File) Name() string { ... }
 
 **Pattern name:** Typed Constants with iota
 
-**Source citation:** `crypto/crypto.go` lines 70–85, `time/time.go` lines 936–943
+**Source citation:** [crypto/crypto.go#L70](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/crypto.go#L70), [time/time.go#L936](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/time.go#L936)
 
 **What it does:** Related constants are grouped in a `const ( ... )` block using
 a named type and `iota` for sequential values. Constants of the same type
@@ -463,7 +465,7 @@ const (
 
 **Pattern name:** `// guards x` Field Comments
 
-**Source citation:** `net/http/example_handle_test.go` line 16
+**Source citation:** [net/http/example_handle_test.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/example_handle_test.go#L16)
 
 **What it does:** When a sync primitive (mutex) protects specific fields, a brief
 comment documents what it guards: `mu sync.Mutex // guards n`.
@@ -490,7 +492,7 @@ type countHandler struct {
 
 **Pattern name:** Named Type for Semantic Units
 
-**Source citation:** `time/time.go` lines 915–943
+**Source citation:** [time/time.go#L915](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/time.go#L915)
 
 **What it does:** `Duration` is `type Duration int64` — a named type over a primitive.
 This gives it its own method set (`String()`, `Hours()`, `Truncate()`) and prevents
@@ -611,7 +613,7 @@ checking in code that `gofmt` would modify.
 
 **Pattern name:** Grouped Imports (stdlib / external / internal)
 
-**Source citation:** `net/http/server.go` lines 8–36
+**Source citation:** [net/http/server.go#L8](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L8)
 
 **What it does:** Imports are organized in groups separated by blank lines:
 1. Standard library
@@ -641,3 +643,5 @@ import (
     "golang.org/x/net/http/httpguts"
 )
 ```
+
+<!-- PATTERN_COMPLETE -->

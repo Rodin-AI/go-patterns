@@ -1,10 +1,12 @@
 # API Conventions in the Go Standard Library
 
+
+**Source:** [golang/go](https://github.com/golang/go) at commit [`17bd5ab`](https://github.com/golang/go/tree/17bd5ab8c650155dd2bd09f7005726552639eea0)
 ## 1. The Must Pattern
 
 **Pattern name:** MustXxx (Panic on Error)
 
-**Source citation:** `regexp/regexp.go` lines 310–320, `text/template/helper.go` lines 19–30
+**Source citation:** [regexp/regexp.go#L310](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/regexp/regexp.go#L310), [text/template/helper.go#L19](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/text/template/helper.go#L19)
 
 **What it does:** A function wraps a fallible constructor and panics if the error
 is non-nil. Named `MustXxx` or `Must` (when wrapping a generic `(T, error)` pair).
@@ -114,7 +116,7 @@ func Must(t *Template, err error) *Template {
 
 **Pattern name:** Fallible Constructor + Must Wrapper
 
-**Source citation:** `regexp/regexp.go` lines 130–131, 310–320
+**Source citation:** [regexp/regexp.go#L130](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/regexp/regexp.go#L130), 310–320
 
 **What it does:** The real constructor returns `(*T, error)`. A parallel `Must` variant
 wraps it for use in global variable initialization.
@@ -149,7 +151,7 @@ func MustCompile(str string) *Regexp {
 
 **Pattern name:** WithContext Function Overload
 
-**Source citation:** `net/http/request.go` lines 867–869, 894–930
+**Source citation:** [net/http/request.go#L867](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/request.go#L867), 894–930
 
 **What it does:** Provides two function variants: `NewRequest` (uses `context.Background()`)
 and `NewRequestWithContext` (accepts an explicit context). The simple version delegates
@@ -182,7 +184,7 @@ func NewRequestWithContext(ctx context.Context, method, url string, body io.Read
 
 **Pattern name:** `*Options` Parameter — Nil Means Defaults
 
-**Source citation:** `log/slog/text_handler.go` lines 28–42, `log/slog/handler.go` lines 135–175
+**Source citation:** [log/slog/text_handler.go#L28](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/log/slog/text_handler.go#L28), [log/slog/handler.go#L135](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/log/slog/handler.go#L135)
 
 **What it does:** A constructor accepts a pointer to an options struct. If the pointer
 is nil, all defaults apply. The constructor internally substitutes a zero-value struct.
@@ -221,7 +223,7 @@ func NewTextHandler(w io.Writer, opts *HandlerOptions) *TextHandler {
 
 **Pattern name:** Builder (Write Methods + String/Bytes Finalizer)
 
-**Source citation:** `strings/builder.go` lines 14–113
+**Source citation:** [strings/builder.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/strings/builder.go#L14)
 
 **What it does:** A zero-value struct accumulates data via Write/WriteByte/WriteString
 methods, then produces a final result via String(). The builder is not reusable after
@@ -264,7 +266,7 @@ func (b *Builder) String() string {
 
 **Pattern name:** Convenience Wrappers over Configurable Core
 
-**Source citation:** `os/file.go` lines 385–415
+**Source citation:** [os/file.go#L385](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L385)
 
 **What it does:** Simple functions (`Open`, `Create`) delegate to the fully configurable
 `OpenFile` with pre-set flags. Users choose their level of control.
@@ -355,7 +357,7 @@ func OpenFile(name string, flag int, perm FileMode) (*File, error) {
 
 **Pattern name:** Convenience Package Functions
 
-**Source citation:** `net/http/client.go` line 109, implied by `http.Get`, `http.Post`
+**Source citation:** [net/http/client.go#L109](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/client.go#L109), implied by `http.Get`, `http.Post`
 
 **What it does:** Top-level functions like `http.Get(url)` call methods on the
 `DefaultClient`. Users can bypass by creating their own `Client`.
@@ -384,7 +386,7 @@ var DefaultClient = &Client{}
 
 **Pattern name:** RegisterXxx for Side-Effect Imports
 
-**Source citation:** `crypto/crypto.go` lines 145–150
+**Source citation:** [crypto/crypto.go#L145](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/crypto.go#L145)
 
 **What it does:** A `RegisterHash(h Hash, f func() hash.Hash)` function allows
 algorithm implementations in sub-packages to register themselves via `init()`.
@@ -415,7 +417,7 @@ func RegisterHash(h Hash, f func() hash.Hash) {
 
 **Pattern name:** Close vs Shutdown (Immediate vs Graceful)
 
-**Source citation:** `net/http/server.go` lines 3171–3220 (Close), 3221+ (Shutdown)
+**Source citation:** [net/http/server.go#L3171](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L3171) (Close), 3221+ (Shutdown)
 
 **What it does:** Provides both `Close()` (immediate, forceful) and `Shutdown(ctx)`
 (graceful, waits for in-flight requests). The context on Shutdown provides a
@@ -530,7 +532,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 **Pattern name:** NewXxx Returning Channel-Bearing Struct
 
-**Source citation:** `time/tick.go` lines 16–45, `time/sleep.go` lines 89–155
+**Source citation:** [time/tick.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/tick.go#L16), [time/sleep.go#L89](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/sleep.go#L89)
 
 **What it does:** `NewTicker(d)` and `NewTimer(d)` return structs with a `C <-chan Time`
 field. Consumers select on the channel to receive time events.
@@ -561,3 +563,5 @@ func NewTicker(d Duration) *Ticker {
     return t
 }
 ```
+
+<!-- PATTERN_COMPLETE -->

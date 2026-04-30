@@ -1,10 +1,12 @@
 # Struct Design Patterns in the Go Standard Library
 
+
+**Source:** [golang/go](https://github.com/golang/go) at commit [`17bd5ab`](https://github.com/golang/go/tree/17bd5ab8c650155dd2bd09f7005726552639eea0)
 ## 1. Zero-Value Usability
 
 **Pattern name:** Zero Value Ready
 
-**Source citation:** `net/http/client.go` lines 31–35, `strings/builder.go` lines 14–16
+**Source citation:** [net/http/client.go#L31](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/client.go#L31), [strings/builder.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/strings/builder.go#L14)
 
 **What it does:** Structs are designed so their zero value is immediately useful without
 explicit initialization. Nil fields fall back to sensible defaults at method call time.
@@ -126,7 +128,7 @@ type Buffer struct {
 
 **Pattern name:** Indirection via Unexported Impl
 
-**Source citation:** `os/types.go` lines 16–20, `os/file_unix.go` lines 59–71
+**Source citation:** [os/types.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/types.go#L16), [os/file_unix.go#L59](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file_unix.go#L59)
 
 **What it does:** The exported type (`File`) embeds a pointer to an unexported type
 (`*file`) that holds the real implementation state. Users interact only with the
@@ -173,7 +175,7 @@ type file struct {
 
 **Pattern name:** NewXxx Constructor
 
-**Source citation:** `bufio/scan.go` lines 89–96, `bufio/bufio.go` lines 50–60
+**Source citation:** [bufio/scan.go#L89](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/scan.go#L89), [bufio/bufio.go#L50](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/bufio.go#L50)
 
 **What it does:** A package-level function `NewXxx(deps) *Xxx` constructs the type
 with required dependencies and internal defaults that can't be expressed via zero
@@ -294,7 +296,7 @@ func NewRequest(method, url string, body io.Reader) (*Request, error) {
 
 **Pattern name:** NewXxx / NewXxxSize Pair
 
-**Source citation:** `bufio/bufio.go` lines 50, 62, 589, 607
+**Source citation:** [bufio/bufio.go#L50](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/bufio.go#L50), 62, 589, 607
 
 **What it does:** Provides two constructors — one with defaults (`NewReader`) and one
 with explicit configuration (`NewReaderSize`). The default version calls the
@@ -325,7 +327,7 @@ func NewWriter(w io.Writer) *Writer {
 
 **Pattern name:** Configuration Struct (Exported Fields, Nil-Means-Default)
 
-**Source citation:** `net/http/server.go` lines 3020–3120, `crypto/tls/common.go` lines 566+, `log/slog/handler.go` lines 135–175
+**Source citation:** [net/http/server.go#L3020](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L3020), [crypto/tls/common.go#L566](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/tls/common.go#L566)+, [log/slog/handler.go#L135](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/log/slog/handler.go#L135)
 
 **What it does:** A struct with exported, documented fields provides all
 configuration knobs. Nil/zero values always mean "use the default".
@@ -440,7 +442,7 @@ func NewTextHandler(w io.Writer, opts *HandlerOptions) *TextHandler {
 
 **Pattern name:** Interface Abstraction for Pluggable Implementations
 
-**Source citation:** `crypto/crypto.go` lines 180–200, `net/http/transport.go` lines 66–82
+**Source citation:** [crypto/crypto.go#L180](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/crypto.go#L180), [net/http/transport.go#L66](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/transport.go#L66)
 
 **What it does:** Core behavior is defined via an interface. The package provides
 a default concrete implementation, but any user type satisfying the interface
@@ -485,7 +487,7 @@ type Client struct {
 
 **Pattern name:** copyCheck (Runtime Copy Detection)
 
-**Source citation:** `strings/builder.go` lines 25–40
+**Source citation:** [strings/builder.go#L25](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/strings/builder.go#L25)
 
 **What it does:** On first mutation, the Builder records its own address. Subsequent
 mutations compare the current receiver address against the recorded one. If they
@@ -517,7 +519,7 @@ func (b *Builder) copyCheck() {
 
 **Pattern name:** Package-Level Default Instance
 
-**Source citation:** `net/http/client.go` line 109, `net/http/transport.go` lines 47–58
+**Source citation:** [net/http/client.go#L109](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/client.go#L109), [net/http/transport.go#L47](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/transport.go#L47)
 
 **What it does:** The package provides a pre-configured, ready-to-use instance as
 a package-level variable. Package-level convenience functions delegate to it.
@@ -557,7 +559,7 @@ var DefaultTransport RoundTripper = &Transport{
 
 **Pattern name:** Post-Construction Configuration via Methods
 
-**Source citation:** `bufio/scan.go` lines 275–293
+**Source citation:** [bufio/scan.go#L275](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/scan.go#L275)
 
 **What it does:** After construction with `NewScanner`, optional configuration is
 applied via methods (`Split`, `Buffer`) before the first call to `Scan`.
@@ -595,3 +597,5 @@ func (s *Scanner) Split(split SplitFunc) {
     s.split = split
 }
 ```
+
+<!-- PATTERN_COMPLETE -->

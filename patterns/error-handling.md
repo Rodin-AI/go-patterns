@@ -6,21 +6,21 @@ Patterns extracted from the Go standard library source code.
 
 ## 1. Sentinel Errors
 
-### Source: `src/io/io.go:40-43` (EOF), `src/errors/errors.go:81-83` (ErrUnsupported)
+### Source: [src/io/io.go#L40](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L40) (EOF), [src/errors/errors.go#L81](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L81) (ErrUnsupported)
 
 ```go
-// src/io/io.go:40-43
+// [src/io/io.go#L40](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L40)
 // EOF is the error returned by Read when no more input is available.
 // (Read must return EOF itself, not an error wrapping EOF,
 // because callers will test for EOF using ==.)
 var EOF = errors.New("EOF")
 
-// src/io/io.go:47-49
+// [src/io/io.go#L47](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L47)
 var ErrUnexpectedEOF = errors.New("unexpected EOF")
 ```
 
 ```go
-// src/errors/errors.go:81-83
+// [src/errors/errors.go#L81](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L81)
 var ErrUnsupported = New("unsupported operation")
 ```
 
@@ -132,15 +132,15 @@ func Read() error {
 
 ## 2. errors.New — Minimal Error Construction
 
-### Source: `src/errors/errors.go:62-69`
+### Source: [src/errors/errors.go#L62](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L62)
 
 ```go
-// src/errors/errors.go:62-64
+// [src/errors/errors.go#L62](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L62)
 func New(text string) error {
     return &errorString{text}
 }
 
-// src/errors/errors.go:66-69
+// [src/errors/errors.go#L66](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L66)
 type errorString struct {
     s string
 }
@@ -177,10 +177,10 @@ func doThing() error {
 
 ## 3. Error Wrapping with fmt.Errorf and %w
 
-### Source: `src/fmt/errors.go:13-23`, `src/fmt/errors.go:70-80`
+### Source: [src/fmt/errors.go#L13](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/fmt/errors.go#L13), [src/fmt/errors.go#L70](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/fmt/errors.go#L70)
 
 ```go
-// src/fmt/errors.go:13-23
+// [src/fmt/errors.go#L13](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/fmt/errors.go#L13)
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error.
 //
@@ -190,7 +190,7 @@ func doThing() error {
 // Unwrap method returning a []error containing all the %w operands.
 func Errorf(format string, a ...any) (err error) { ... }
 
-// src/fmt/errors.go:70-80
+// [src/fmt/errors.go#L70](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/fmt/errors.go#L70)
 type wrapError struct {
     msg string
     err error
@@ -310,10 +310,10 @@ return fmt.Errorf("internal: %w", internalErr)  // now callers depend on interna
 
 ## 4. errors.Is — Checking Error Identity Through Chains
 
-### Source: `src/errors/wrap.go:30-44`
+### Source: [src/errors/wrap.go#L30](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/wrap.go#L30)
 
 ```go
-// src/errors/wrap.go:30-44
+// [src/errors/wrap.go#L30](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/wrap.go#L30)
 func Is(err, target error) bool {
     if err == nil || target == nil {
         return err == target
@@ -377,10 +377,10 @@ if errors.Is(err, os.ErrNotExist) { ... }  // works through wrapping
 
 ## 5. errors.As — Extracting Error Types Through Chains
 
-### Source: `src/errors/wrap.go:96-120`
+### Source: [src/errors/wrap.go#L96](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/wrap.go#L96)
 
 ```go
-// src/errors/wrap.go:96-120
+// [src/errors/wrap.go#L96](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/wrap.go#L96)
 func As(err error, target any) bool {
     if err == nil {
         return false
@@ -406,7 +406,7 @@ if errors.As(err, &pathErr) {
 
 ### Go 1.24+: errors.AsType (generic version)
 
-From `src/errors/errors.go:48-56` doc:
+From [src/errors/errors.go#L48](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L48) doc:
 ```go
 if perr, ok := errors.AsType[*fs.PathError](err); ok {
     fmt.Println(perr.Path)
@@ -428,10 +428,10 @@ if errors.As(err, &pathErr) { ... }  // works through wrapping
 
 ## 6. errors.Join — Multi-Error Aggregation
 
-### Source: `src/errors/join.go:20-39`
+### Source: [src/errors/join.go#L20](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/join.go#L20)
 
 ```go
-// src/errors/join.go:20-39
+// [src/errors/join.go#L20](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/join.go#L20)
 func Join(errs ...error) error {
     n := 0
     for _, err := range errs {
@@ -555,7 +555,7 @@ return lastErr
 
 ## 7. Custom Is() Method — Equivalence Classes
 
-### Source: `src/errors/wrap.go:42-44` (doc comment), `src/context/context.go:177-179`
+### Source: [src/errors/wrap.go#L42](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/wrap.go#L42) (doc comment), [src/context/context.go#L177](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L177)
 
 From the `errors.Is` doc:
 ```go
@@ -569,7 +569,7 @@ From the `errors.Is` doc:
 
 Real example from context:
 ```go
-// src/context/context.go:177-179
+// [src/context/context.go#L177](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L177)
 type deadlineExceededError struct{}
 
 func (deadlineExceededError) Error() string   { return "context deadline exceeded" }
@@ -594,10 +594,10 @@ func (e MyError) Is(target error) bool {
 
 ## 8. Error Wrapping in Custom Types (Unwrap pattern)
 
-### Source: `src/encoding/json/encode.go:276-293`
+### Source: [src/encoding/json/encode.go#L276](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/encode.go#L276)
 
 ```go
-// src/encoding/json/encode.go:276-282
+// [src/encoding/json/encode.go#L276](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/encode.go#L276)
 type MarshalerError struct {
     Type       reflect.Type
     Err        error
@@ -650,10 +650,10 @@ func (e *MyError) Error() string { return e.Err.Error() }
 
 ## 9. ErrUnsupported — Feature Detection via Errors
 
-### Source: `src/errors/errors.go:76-83`
+### Source: [src/errors/errors.go#L76](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L76)
 
 ```go
-// src/errors/errors.go:76-83
+// [src/errors/errors.go#L76](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/errors/errors.go#L76)
 // ErrUnsupported indicates that a requested operation cannot be performed,
 // because it is unsupported.
 //
@@ -685,10 +685,10 @@ return errors.ErrUnsupported  // no info about what operation or why
 
 ## 10. Error String Conventions
 
-### Source: `src/net/http/server.go:39-56`
+### Source: [src/net/http/server.go#L39](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L39)
 
 ```go
-// src/net/http/server.go:39-56
+// [src/net/http/server.go#L39](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L39)
 var (
     ErrHijacked       = errors.New("http: connection has been hijacked")
     ErrContentLength  = errors.New("http: wrote more than the declared Content-Length")
@@ -742,3 +742,5 @@ Is this a specific, well-known condition?
 | Aggregate multiple errors | `errors.Join(err1, err2)` |
 | Make custom types traversable | Implement `Unwrap() error` |
 | Define error equivalence | Implement `Is(error) bool` |
+
+<!-- PATTERN_COMPLETE -->

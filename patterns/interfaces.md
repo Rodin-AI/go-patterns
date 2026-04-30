@@ -6,22 +6,22 @@ Patterns extracted from the Go standard library source code.
 
 ## 1. Small Interfaces (1-2 Methods)
 
-### Source: `src/io/io.go:80-92` (Reader), `93-103` (Writer), `105-109` (Closer)
+### Source: [src/io/io.go#L80](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L80) (Reader), `93-103` (Writer), `105-109` (Closer)
 
 Go's most powerful interfaces have exactly **one method**:
 
 ```go
-// src/io/io.go:80-92
+// [src/io/io.go#L80](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L80)
 type Reader interface {
     Read(p []byte) (n int, err error)
 }
 
-// src/io/io.go:93-103
+// [src/io/io.go#L93](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L93)
 type Writer interface {
     Write(p []byte) (n int, err error)
 }
 
-// src/io/io.go:105-109
+// [src/io/io.go#L105](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L105)
 type Closer interface {
     Close() error
 }
@@ -120,30 +120,30 @@ Large interfaces are hard to implement, hard to mock, and couple consumers to ca
 
 ## 2. Interface Composition
 
-### Source: `src/io/io.go:131-155`
+### Source: [src/io/io.go#L131](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L131)
 
 Compose small interfaces into larger ones only when needed:
 
 ```go
-// src/io/io.go:131-134
+// [src/io/io.go#L131](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L131)
 type ReadWriter interface {
     Reader
     Writer
 }
 
-// src/io/io.go:136-139
+// [src/io/io.go#L136](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L136)
 type ReadCloser interface {
     Reader
     Closer
 }
 
-// src/io/io.go:141-144
+// [src/io/io.go#L141](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L141)
 type WriteCloser interface {
     Writer
     Closer
 }
 
-// src/io/io.go:146-150
+// [src/io/io.go#L146](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L146)
 type ReadWriteCloser interface {
     Reader
     Writer
@@ -168,13 +168,13 @@ func processData(rw ReadWriteCloser) {
 
 ## 3. Accept Interfaces, Return Structs
 
-### Source: `src/io/io.go:461` (LimitReader), `src/io/io.go:618` (TeeReader)
+### Source: [src/io/io.go#L461](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L461) (LimitReader), [src/io/io.go#L618](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L618) (TeeReader)
 
 ```go
 // src/io/io.go:461
 func LimitReader(r Reader, n int64) Reader { return &LimitedReader{r, n} }
 
-// src/io/io.go:467-471
+// [src/io/io.go#L467](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L467)
 type LimitedReader struct {
     R Reader // underlying reader
     N int64  // max bytes remaining
@@ -182,7 +182,7 @@ type LimitedReader struct {
 ```
 
 ```go
-// src/io/io.go:618-620
+// [src/io/io.go#L618](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L618)
 func TeeReader(r Reader, w Writer) Reader {
     return &teeReader{r, w}
 }
@@ -272,7 +272,7 @@ func NewServer() ServerInterface  // hides useful config fields
 
 ## 4. Interface Satisfaction as a Compile-Time Check
 
-### Source: `src/io/io.go:645`, `src/net/http/server.go:4071`
+### Source: [src/io/io.go#L645](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L645), [src/net/http/server.go#L4071](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L4071)
 
 ```go
 // src/io/io.go:645
@@ -299,10 +299,10 @@ func doSomething(w ResponseWriter) {
 
 ## 5. Interface-Based Polymorphism (sort.Interface)
 
-### Source: `src/sort/sort.go:16-41`
+### Source: [src/sort/sort.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sort/sort.go#L16)
 
 ```go
-// src/sort/sort.go:16-41
+// [src/sort/sort.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sort/sort.go#L16)
 type Interface interface {
     Len() int
     Less(i, j int) bool
@@ -328,17 +328,17 @@ Note: Since Go 1.21, `slices.SortFunc` is preferred for slices (generic + faster
 
 ## 6. The Adapter Pattern (HandlerFunc)
 
-### Source: `src/net/http/server.go:2334-2342`
+### Source: [src/net/http/server.go#L2334](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L2334)
 
 ```go
-// src/net/http/server.go:2334-2338
+// [src/net/http/server.go#L2334](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L2334)
 // The HandlerFunc type is an adapter to allow the use of
 // ordinary functions as HTTP handlers. If f is a function
 // with the appropriate signature, HandlerFunc(f) is a
 // Handler that calls f.
 type HandlerFunc func(ResponseWriter, *Request)
 
-// src/net/http/server.go:2341-2342
+// [src/net/http/server.go#L2341](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L2341)
 // ServeHTTP calls f(w, r).
 func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request) {
     f(w, r)
@@ -436,15 +436,15 @@ func (h myHandler) ServeHTTP(w ResponseWriter, r *Request) {
 
 ## 7. Optional Interfaces (Runtime Feature Detection)
 
-### Source: `src/net/http/server.go:165-175` (Flusher), `src/net/http/server.go:183-206` (Hijacker)
+### Source: [src/net/http/server.go#L165](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L165) (Flusher), [src/net/http/server.go#L183](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L183) (Hijacker)
 
 ```go
-// src/net/http/server.go:165-170
+// [src/net/http/server.go#L165](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L165)
 type Flusher interface {
     Flush()
 }
 
-// src/net/http/server.go:183-206
+// [src/net/http/server.go#L183](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L183)
 type Hijacker interface {
     Hijack() (net.Conn, *bufio.ReadWriter, error)
 }
@@ -564,10 +564,10 @@ type ResponseWriter interface {
 
 ## 8. The Stringer Interface (Convention-Based Behavior)
 
-### Source: `src/fmt/print.go:63-66`
+### Source: [src/fmt/print.go#L63](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/fmt/print.go#L63)
 
 ```go
-// src/fmt/print.go:63-66
+// [src/fmt/print.go#L63](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/fmt/print.go#L63)
 type Stringer interface {
     String() string
 }
@@ -596,10 +596,10 @@ func printThing(v any) string {
 
 ## 9. Interface Upgrade Pattern (WriterTo/ReaderFrom in io.Copy)
 
-### Source: `src/io/io.go:410-417`
+### Source: [src/io/io.go#L410](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L410)
 
 ```go
-// src/io/io.go:410-417
+// [src/io/io.go#L410](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L410)
 func copyBuffer(dst Writer, src Reader, buf []byte) (written int64, err error) {
     // If the reader has a WriteTo method, use it to do the copy.
     // Avoids an allocation and a copy.
@@ -632,15 +632,15 @@ func Copy(dst Writer, src Reader) {
 
 ## 10. The driver.Driver Pattern (Plugin Interfaces)
 
-### Source: `src/database/sql/driver/driver.go:85-97`, `104-112`
+### Source: [src/database/sql/driver/driver.go#L85](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/driver/driver.go#L85), `104-112`
 
 ```go
-// src/database/sql/driver/driver.go:85-97
+// [src/database/sql/driver/driver.go#L85](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/driver/driver.go#L85)
 type Driver interface {
     Open(name string) (Conn, error)
 }
 
-// src/database/sql/driver/driver.go:104-112
+// [src/database/sql/driver/driver.go#L104](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/driver/driver.go#L104)
 type DriverContext interface {
     OpenConnector(name string) (Connector, error)
 }
@@ -676,3 +676,5 @@ type Driver interface {
 | Compile-time interface checks | `var _ Interface = (*Type)(nil)` |
 | Runtime interface upgrade for optimization | `io.Copy` → `WriterTo`/`ReaderFrom` |
 | Plugin/driver interfaces start minimal | `database/sql/driver.Driver` |
+
+<!-- PATTERN_COMPLETE -->

@@ -6,10 +6,10 @@ Patterns extracted from the Go standard library source code.
 
 ## 1. Package-Level Documentation
 
-### Source: `src/io/io.go:5-13`, `src/sync/mutex.go:5-11`, `src/context/context.go:5-57`
+### Source: [src/io/io.go#L5](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L5), [src/sync/mutex.go#L5](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L5), [src/context/context.go#L5](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L5)
 
 ```go
-// src/io/io.go:5-13
+// [src/io/io.go#L5](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/io.go#L5)
 // Package io provides basic interfaces to I/O primitives.
 // Its primary job is to wrap existing implementations of such primitives,
 // such as those in package os, into shared public interfaces that
@@ -22,7 +22,7 @@ package io
 ```
 
 ```go
-// src/sync/mutex.go:5-11
+// [src/sync/mutex.go#L5](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L5)
 // Package sync provides basic synchronization primitives such as mutual
 // exclusion locks. Other than the Once and WaitGroup types, most are intended
 // for use by low-level library routines. Higher-level synchronization is
@@ -222,7 +222,7 @@ type Parser struct {
 
 ## 5. init() Functions — Use Sparingly
 
-### Source: `src/net/http/http2.go:37`
+### Source: [src/net/http/http2.go#L37](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/http2.go#L37)
 
 ```go
 // src/net/http/http2.go:37
@@ -379,7 +379,7 @@ srv := &http.Server{
 
 ## 7. Constructor Pattern — NewX Functions
 
-### Source: `src/net/http/server.go:2639`, `src/database/sql/sql.go:836`
+### Source: [src/net/http/server.go#L2639](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L2639), [src/database/sql/sql.go#L836](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/sql.go#L836)
 
 ```go
 // src/net/http/server.go:2639
@@ -387,7 +387,7 @@ func NewServeMux() *ServeMux {
     return new(ServeMux)
 }
 
-// src/database/sql/sql.go:836-843
+// [src/database/sql/sql.go#L836](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/sql.go#L836)
 func OpenDB(c driver.Connector) *DB {
     ctx, cancel := context.WithCancel(context.Background())
     db := &DB{
@@ -488,10 +488,10 @@ The user never sees `driver.Conn`. The driver never sees `sql.DB`'s pool logic. 
 
 ## 10. Context Key Pattern — Type-Safe Context Values
 
-### Source: `src/context/context.go:132-164`, `src/net/http/server.go:244-252`
+### Source: [src/context/context.go#L132](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L132), [src/net/http/server.go#L244](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L244)
 
 ```go
-// src/context/context.go:132-164 (from doc)
+// [src/context/context.go#L132](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L132) (from doc)
 // package user
 //
 // type key int
@@ -508,7 +508,7 @@ The user never sees `driver.Conn`. The driver never sees `sql.DB`'s pool logic. 
 ```
 
 ```go
-// src/net/http/server.go:244-252
+// [src/net/http/server.go#L244](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L244)
 var (
     ServerContextKey = &contextKey{"http-server"}
     LocalAddrContextKey = &contextKey{"local-addr"}
@@ -598,10 +598,10 @@ ctx = context.WithValue(ctx, "timeout", 5*time.Second)  // use function params!
 
 ## 11. Struct Tags for Codec Configuration
 
-### Source: `src/encoding/json/tags.go:17-21`, `src/encoding/json/encode.go:101-181`
+### Source: [src/encoding/json/tags.go#L17](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/tags.go#L17), [src/encoding/json/encode.go#L101](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/encode.go#L101)
 
 ```go
-// src/encoding/json/tags.go:17-21
+// [src/encoding/json/tags.go#L17](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/tags.go#L17)
 func parseTag(tag string) (string, tagOptions) {
     tag, opt, _ := strings.Cut(tag, ",")
     return tag, tagOptions(opt)
@@ -645,3 +645,5 @@ Struct tags are metadata for codecs. The `json` package reads `json:"..."` tags 
 | API layers | Separate user from implementor (SPI) |
 | Context values | Unexported key type + typed accessors |
 | Configuration | Struct literals or functional options |
+
+<!-- PATTERN_COMPLETE -->

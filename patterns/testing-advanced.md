@@ -1,5 +1,7 @@
 # Advanced Go Testing Patterns
 
+
+**Source:** [golang/go](https://github.com/golang/go) at commit [`17bd5ab`](https://github.com/golang/go/tree/17bd5ab8c650155dd2bd09f7005726552639eea0)
 Patterns extracted from the Go standard library (`src/net/http/`, `src/encoding/json/`, `src/testing/`) and Kubernetes source code.
 
 ---
@@ -10,7 +12,7 @@ The canonical Go test style. Every Go stdlib test file uses this pattern.
 
 ### Pattern Name: Anonymous Struct Test Table
 
-**Source:** `/tmp/go-src/src/net/http/header_test.go` lines 17-108
+**Source:** [src/net/http/header_test.go#L17](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/header_test.go#L17)
 
 **What they do:** Define test cases as a slice of anonymous structs, iterate with a range loop.
 
@@ -145,7 +147,7 @@ func TestHeaderWrite(t *testing.T) {
 
 ### Pattern Name: Named Table Tests with t.Run (Subtests)
 
-**Source:** `/tmp/go-src/src/encoding/json/encode_test.go` lines 285-320, `/tmp/go-src/src/encoding/json/scanner_test.go` lines 30-50
+**Source:** [src/encoding/json/encode_test.go#L285](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/encode_test.go#L285), [src/encoding/json/scanner_test.go#L30](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/scanner_test.go#L30)
 
 **What they do:** Combine table-driven tests with `t.Run` for named subtests. Use a `CaseName` struct that captures file/line for error reporting.
 
@@ -180,7 +182,7 @@ func TestValid(t *testing.T) {
 
 ### Pattern Name: CaseName with Caller Position Tracking
 
-**Source:** `/tmp/go-src/src/encoding/json/internal/jsontest/testcase.go` lines 18-37
+**Source:** [src/encoding/json/internal/jsontest/testcase.go#L18](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/internal/jsontest/testcase.go#L18)
 
 **What they do:** Create a helper type that captures the caller's file:line at the point of test case declaration, so error messages point back to the exact test case definition.
 
@@ -214,7 +216,7 @@ func (pos CasePos) String() string {
 
 ### Pattern Name: t.Helper() for Clean Stack Traces
 
-**Source:** `/tmp/go-src/src/testing/testing.go` lines 1415-1435
+**Source:** [src/testing/testing.go#L1415](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/testing/testing.go#L1415)
 
 **What they do:** Call `t.Helper()` as the first line in any test utility function. This marks the function as a helper, so test failure messages report the caller's line instead of the helper's line.
 
@@ -254,7 +256,7 @@ func run[T TBRun[T]](t T, f func(t T, mode testMode), opts ...any) {
 
 ### Pattern Name: *testing.T as First Argument to Helpers
 
-**Source:** `/tmp/go-src/src/net/http/serve_test.go` lines 4555-4580
+**Source:** [src/net/http/serve_test.go#L4555](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/serve_test.go#L4555)
 
 **What they do:** Pass `*testing.T` (or `testing.TB`) as the first argument to test helper functions, making the dependency on the test context explicit.
 
@@ -288,7 +290,7 @@ mustGet := func(url string, headers ...string) {
 
 ### Pattern Name: t.Cleanup for Test-Scoped Resources
 
-**Source:** `/tmp/go-src/src/testing/testing.go` lines 1439-1468, `/tmp/go-src/src/net/http/clientserver_test.go` lines 120-127
+**Source:** [src/testing/testing.go#L1439](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/testing/testing.go#L1439), [src/net/http/clientserver_test.go#L120](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/clientserver_test.go#L120)
 
 **What they do:** Use `t.Cleanup(fn)` instead of `defer` for resource cleanup in tests.
 
@@ -348,7 +350,7 @@ ServeFile(w, r, "testdata/file")
 
 ### Pattern Name: Golden Files with -update Flag
 
-**Source:** `/tmp/go-src/src/cmd/gofmt/gofmt_test.go` lines 18, 113-138
+**Source:** [src/cmd/gofmt/gofmt_test.go#L18](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/cmd/gofmt/gofmt_test.go#L18), 113-138
 
 **What they do:** Compare test output against `.golden` files. Provide a `-update` flag that regenerates golden files from current output when behavior intentionally changes.
 
@@ -488,7 +490,7 @@ func TestRewrite(t *testing.T) {
 
 ### Pattern Name: httptest.NewRecorder for Unit-Testing Handlers
 
-**Source:** `/tmp/go-src/src/net/http/serve_test.go` lines 387-393
+**Source:** [src/net/http/serve_test.go#L387](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/serve_test.go#L387)
 
 **What they do:** Use `httptest.NewRecorder()` to test HTTP handlers without starting a server. Captures status code, headers, and body.
 
@@ -591,7 +593,7 @@ func TestServeMuxHandler(t *testing.T) {
 
 ### Pattern Name: httptest.NewServer for Integration-Style Tests
 
-**Source:** `/tmp/go-src/src/net/http/clientserver_test.go` lines 203-280
+**Source:** [src/net/http/clientserver_test.go#L203](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/clientserver_test.go#L203)
 
 **What they do:** Use `httptest.NewServer` / `httptest.NewUnstartedServer` for end-to-end HTTP testing with a real TCP listener on localhost.
 
@@ -622,7 +624,7 @@ func newClientServerTest(t testing.TB, mode testMode, h Handler, opts ...any) *c
 
 ### Pattern Name: b.ReportAllocs + b.RunParallel + b.SetBytes
 
-**Source:** `/tmp/go-src/src/encoding/json/bench_test.go` lines 85-101
+**Source:** [src/encoding/json/bench_test.go#L85](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/bench_test.go#L85)
 
 **What they do:** Combine `b.ReportAllocs()` for allocation reporting, `b.RunParallel` for concurrent benchmarks, and `b.SetBytes` for throughput metrics.
 
@@ -660,7 +662,7 @@ func BenchmarkCodeEncoder(b *testing.B) {
 
 ### Pattern Name: testing.Short() for Expensive Tests
 
-**Source:** `/tmp/go-src/src/net/http/serve_test.go` lines 800, 1000, 2212, 2581
+**Source:** [src/net/http/serve_test.go#L800](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/serve_test.go#L800), 1000, 2212, 2581
 
 **What they do:** Skip slow/flaky/network-dependent tests with `testing.Short()`. The Go CI runs with `-short` in fast mode, full tests in thorough mode.
 
@@ -754,7 +756,7 @@ func afterTest(t testing.TB) {
 
 ### Pattern Name: Bridge File for Internal Testing
 
-**Source:** `/tmp/go-src/src/net/http/export_test.go` lines 1-50
+**Source:** [src/net/http/export_test.go#L1](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/export_test.go#L1)
 
 **What they do:** Create an `export_test.go` file in the package itself (package `http`, not `http_test`) that exports internal symbols to external test packages. Only compiled during testing.
 
@@ -779,7 +781,7 @@ var (
 
 ### Pattern Name: Generic Test Runner Across Protocol Modes
 
-**Source:** `/tmp/go-src/src/net/http/clientserver_test.go` lines 100-134
+**Source:** [src/net/http/clientserver_test.go#L100](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/clientserver_test.go#L100)
 
 **What they do:** A generic `run[T]` function that executes every client/server test in HTTP/1.1, HTTP/2, and HTTP/3 modes automatically. Tests opt into specific modes via options.
 
@@ -810,7 +812,7 @@ func run[T TBRun[T]](t T, f func(t T, mode testMode), opts ...any) {
 
 ### Pattern Name: io.Writer Adapter for *testing.T
 
-**Source:** `/tmp/go-src/src/net/http/clientserver_test.go` lines 337-345
+**Source:** [src/net/http/clientserver_test.go#L337](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/clientserver_test.go#L337)
 
 **What they do:** Implement `io.Writer` backed by `t.Logf`, so server error logs appear in test output (visible with `-v`, suppressed otherwise).
 
@@ -830,3 +832,5 @@ func (w testLogWriter) Write(b []byte) (int, error) {
 // Usage:
 cst.ts.Config.ErrorLog = log.New(testLogWriter{t}, "", 0)
 ```
+
+<!-- PATTERN_COMPLETE -->

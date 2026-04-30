@@ -1,10 +1,12 @@
 # Documentation Patterns in the Go Standard Library
 
+
+**Source:** [golang/go](https://github.com/golang/go) at commit [`17bd5ab`](https://github.com/golang/go/tree/17bd5ab8c650155dd2bd09f7005726552639eea0)
 ## 1. Package Documentation (doc.go or Package Comment)
 
 **Pattern name:** Package Doc Comment
 
-**Source citation:** `net/http/doc.go` lines 6–30, `os/file.go` lines 5–43, `log/slog/doc.go` lines 6–30
+**Source citation:** [net/http/doc.go#L6](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/doc.go#L6), [os/file.go#L5](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L5), [log/slog/doc.go#L6](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/log/slog/doc.go#L6)
 
 **What it does:** The first file in a package (by convention `doc.go`, or the main
 source file) starts with a `// Package xxx ...` comment that explains the package's
@@ -57,7 +59,7 @@ expressed as key-value pairs.
 
 **Pattern name:** `# Heading` in Doc Comments
 
-**Source citation:** `os/file.go` lines 37–43, `net/http/doc.go` (multiple sections)
+**Source citation:** [os/file.go#L37](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L37), `net/http/doc.go` (multiple sections)
 
 **What it does:** Uses `# Section Name` within the package doc comment to organize
 long documentation into navigable sections.
@@ -84,7 +86,7 @@ too many sections (fragmenting simple docs).
 
 **Pattern name:** `// TypeName verb...` or `// FuncName verb...`
 
-**Source citation:** `net/http/server.go` lines 64–82 (Handler), `bufio/scan.go` lines 14–27 (Scanner)
+**Source citation:** [net/http/server.go#L64](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L64) (Handler), [bufio/scan.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/scan.go#L14) (Scanner)
 
 **What it does:** Every exported identifier's doc comment starts with the identifier
 name, followed by a verb phrase describing what it does or represents.
@@ -125,7 +127,7 @@ the comment entirely.
 
 **Pattern name:** `[TypeName]`, `[Package.Symbol]`, `[Method]` Links
 
-**Source citation:** `net/http/server.go` lines 65–70, `os/file.go` line 9
+**Source citation:** [net/http/server.go#L65](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L65), [os/file.go#L9](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L9)
 
 **What it does:** Doc comments use `[SymbolName]` to create hyperlinks to other
 identifiers. These render as clickable links on pkg.go.dev.
@@ -158,7 +160,7 @@ over-linking (every mention of every type).
 
 **Pattern name:** `func ExampleXxx()` / `func ExampleType_Method()`
 
-**Source citation:** `regexp/example_test.go` lines 13–28, `net/http/example_handle_test.go` lines 16–31
+**Source citation:** [regexp/example_test.go#L13](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/regexp/example_test.go#L13), [net/http/example_handle_test.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/example_handle_test.go#L16)
 
 **What it does:** Functions named `Example`, `ExampleXxx`, or `ExampleType_Method`
 in `_test.go` files serve as both executable tests and documentation. They include
@@ -278,7 +280,7 @@ func ExampleHandle() {
 
 **Pattern name:** Indented Code Blocks in Comments
 
-**Source citation:** `os/file.go` lines 17–35, `time/time.go` lines 928–933
+**Source citation:** [os/file.go#L17](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L17), [time/time.go#L928](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/time.go#L928)
 
 **What it does:** Doc comments include indented code snippets (4 spaces) that render
 as preformatted code blocks in godoc.
@@ -318,7 +320,7 @@ for inline (use Example functions instead); examples that reference unexported s
 
 **Pattern name:** `// Deprecated: ...` in Doc Comments
 
-**Source citation:** `net/http/server.go` line 57 (ErrWriteAfterFlush), `os/file.go` lines 93–95
+**Source citation:** [net/http/server.go#L57](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L57) (ErrWriteAfterFlush), [os/file.go#L93](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L93)
 
 **What it does:** A paragraph starting with `Deprecated:` marks an identifier as
 deprecated and explains what to use instead.
@@ -399,7 +401,7 @@ ErrWriteAfterFlush = errors.New("unused")
 
 **Pattern name:** "If there is an error, it will be of type [*XxxError]"
 
-**Source citation:** `os/file.go` lines 388, 406
+**Source citation:** [os/file.go#L388](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L388), 406
 
 **What it does:** Functions document the concrete error type they return, enabling
 callers to type-assert for additional context.
@@ -428,7 +430,7 @@ func Open(name string) (*File, error) {
 
 **Pattern name:** "Safe for concurrent use" / Concurrency Guarantees
 
-**Source citation:** `net/http/transport.go` lines 79–80, `os/types.go` line 17, `regexp/regexp.go` lines 77–79
+**Source citation:** [net/http/transport.go#L79](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/transport.go#L79), [os/types.go#L17](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/types.go#L17), [regexp/regexp.go#L77](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/regexp/regexp.go#L77)
 
 **What it does:** Doc comments explicitly state the concurrency safety of a type
 or note exceptions where concurrent use is not safe.
@@ -454,3 +456,5 @@ concurrent use by multiple goroutines").
 // A Regexp is safe for concurrent use by multiple goroutines,
 // except for configuration methods, such as [Regexp.Longest].
 ```
+
+<!-- PATTERN_COMPLETE -->

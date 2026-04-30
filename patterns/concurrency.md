@@ -6,10 +6,10 @@ Patterns extracted from the Go standard library source code.
 
 ## 1. sync.Mutex — The Basic Lock
 
-### Source: `src/sync/mutex.go:18-34`, `src/sync/mutex.go:42-67`
+### Source: [src/sync/mutex.go#L18](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L18), [src/sync/mutex.go#L42](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L42)
 
 ```go
-// src/sync/mutex.go:18-34
+// [src/sync/mutex.go#L18](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L18)
 // A Mutex is a mutual exclusion lock.
 // The zero value for a Mutex is an unlocked mutex.
 //
@@ -19,13 +19,13 @@ type Mutex struct {
     mu isync.Mutex
 }
 
-// src/sync/mutex.go:36-39
+// [src/sync/mutex.go#L36](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L36)
 type Locker interface {
     Lock()
     Unlock()
 }
 
-// src/sync/mutex.go:43-46
+// [src/sync/mutex.go#L43](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/mutex.go#L43)
 func (m *Mutex) Lock() {
     m.mu.Lock()
 }
@@ -146,24 +146,24 @@ mu.Unlock()
 
 ## 2. sync.Once — Exactly-Once Initialization
 
-### Source: `src/sync/once.go:12-36`, `src/sync/once.go:56-79`
+### Source: [src/sync/once.go#L12](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/once.go#L12), [src/sync/once.go#L56](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/once.go#L56)
 
 ```go
-// src/sync/once.go:12-23
+// [src/sync/once.go#L12](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/once.go#L12)
 type Once struct {
     _ noCopy
     done atomic.Bool
     m    Mutex
 }
 
-// src/sync/once.go:56-63
+// [src/sync/once.go#L56](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/once.go#L56)
 func (o *Once) Do(f func()) {
     if !o.done.Load() {
         o.doSlow(f)
     }
 }
 
-// src/sync/once.go:65-72
+// [src/sync/once.go#L65](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/once.go#L65)
 func (o *Once) doSlow(f func()) {
     o.m.Lock()
     defer o.m.Unlock()
@@ -301,10 +301,10 @@ once.Do(func() {
 
 ## 3. sync.WaitGroup — Waiting for Goroutine Completion
 
-### Source: `src/sync/waitgroup.go:14-43`, `src/sync/waitgroup.go:236-260`
+### Source: [src/sync/waitgroup.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/waitgroup.go#L14), [src/sync/waitgroup.go#L236](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/waitgroup.go#L236)
 
 ```go
-// src/sync/waitgroup.go:14-43
+// [src/sync/waitgroup.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/waitgroup.go#L14)
 // Typically, a main goroutine will start tasks by calling WaitGroup.Go
 // and then wait for all tasks to complete by calling WaitGroup.Wait:
 //
@@ -322,7 +322,7 @@ type WaitGroup struct {
 ### Go 1.25+: WaitGroup.Go
 
 ```go
-// src/sync/waitgroup.go:236-260
+// [src/sync/waitgroup.go#L236](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/waitgroup.go#L236)
 func (wg *WaitGroup) Go(f func()) {
     wg.Add(1)
     go func() {
@@ -374,10 +374,10 @@ wg.Wait()
 
 ## 4. sync.Pool — Object Reuse for GC Pressure
 
-### Source: `src/sync/pool.go:44-63`
+### Source: [src/sync/pool.go#L44](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/pool.go#L44)
 
 ```go
-// src/sync/pool.go:44-63
+// [src/sync/pool.go#L44](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/pool.go#L44)
 // Pool's purpose is to cache allocated but unused items for later reuse,
 // relieving pressure on the garbage collector. That is, it makes it easy to
 // build efficient, thread-safe free lists.
@@ -439,15 +439,15 @@ pool.Put(buf)  // still has data from last use
 
 ## 5. Channel as Done Signal (Context Pattern)
 
-### Source: `src/context/context.go:83-100` (Done channel), `src/io/pipe.go:42-45`
+### Source: [src/context/context.go#L83](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L83) (Done channel), [src/io/pipe.go#L42](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L42)
 
 ```go
-// src/context/context.go:83-100
+// [src/context/context.go#L83](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L83)
 // Done returns a channel that's closed when work done on behalf of this
 // context should be canceled.
 Done() <-chan struct{}
 
-// src/io/pipe.go:42-45
+// [src/io/pipe.go#L42](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L42)
 type pipe struct {
     once sync.Once
     done chan struct{}  // closed on pipe close
@@ -583,10 +583,10 @@ close(done)
 
 ## 6. Context Propagation Rules
 
-### Source: `src/context/context.go:37-48`
+### Source: [src/context/context.go#L37](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L37)
 
 ```go
-// src/context/context.go:37-48
+// [src/context/context.go#L37](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/context/context.go#L37)
 // Do not store Contexts inside a struct type; instead, pass a Context
 // explicitly to each function that needs it. The Context should be the first
 // parameter, typically named ctx:
@@ -622,10 +622,10 @@ func doWork(data Data, ctx context.Context)  // wrong position
 
 ## 7. Context Cancellation with Timeout
 
-### Source: `src/net/http/server.go:4007-4050` (TimeoutHandler)
+### Source: [src/net/http/server.go#L4007](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L4007) (TimeoutHandler)
 
 ```go
-// src/net/http/server.go:4011-4050
+// [src/net/http/server.go#L4011](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L4011)
 func (h *timeoutHandler) ServeHTTP(w ResponseWriter, r *Request) {
     ctx, cancelCtx := context.WithTimeout(r.Context(), h.dt)
     defer cancelCtx()
@@ -675,10 +675,10 @@ func longWork(ctx context.Context) {
 
 ## 8. Select with Non-Blocking Check
 
-### Source: `src/io/pipe.go:51-60`
+### Source: [src/io/pipe.go#L51](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L51)
 
 ```go
-// src/io/pipe.go:51-60
+// [src/io/pipe.go#L51](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L51)
 func (p *pipe) read(b []byte) (n int, err error) {
     select {
     case <-p.done:
@@ -719,17 +719,17 @@ for {
 
 ## 9. Channel Pipeline (io.Pipe)
 
-### Source: `src/io/pipe.go:38-45`, `src/io/pipe.go:195-205`
+### Source: [src/io/pipe.go#L38](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L38), [src/io/pipe.go#L195](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L195)
 
 ```go
-// src/io/pipe.go:38-45
+// [src/io/pipe.go#L38](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L38)
 type pipe struct {
     wrCh chan []byte   // writer sends data slices
     rdCh chan int      // reader returns bytes consumed
     done chan struct{}
 }
 
-// src/io/pipe.go:195-205
+// [src/io/pipe.go#L195](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/io/pipe.go#L195)
 func Pipe() (*PipeReader, *PipeWriter) {
     pw := &PipeWriter{r: PipeReader{pipe: pipe{
         wrCh: make(chan []byte),   // unbuffered
@@ -868,10 +868,10 @@ func produce() <-chan int {
 
 ## 10. Background Worker with Context Shutdown
 
-### Source: `src/database/sql/sql.go:836-843`
+### Source: [src/database/sql/sql.go#L836](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/sql.go#L836)
 
 ```go
-// src/database/sql/sql.go:836-843
+// [src/database/sql/sql.go#L836](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/database/sql/sql.go#L836)
 func OpenDB(c driver.Connector) *DB {
     ctx, cancel := context.WithCancel(context.Background())
     db := &DB{
@@ -903,10 +903,10 @@ go func() {
 
 ## 11. noCopy — Preventing Value Copies
 
-### Source: `src/sync/cond.go:120-126`
+### Source: [src/sync/cond.go#L120](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/cond.go#L120)
 
 ```go
-// src/sync/cond.go:120-126
+// [src/sync/cond.go#L120](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/sync/cond.go#L120)
 type noCopy struct{}
 
 // Lock is a no-op used by -copylocks checker from `go vet`.
@@ -947,3 +947,5 @@ func doWork(wg *sync.WaitGroup) {
 | Backpressure between producer/consumer | Unbuffered channels |
 | Long-lived background worker | Goroutine + context cancellation |
 | Prevent struct copying | Embed `noCopy` field |
+
+<!-- PATTERN_COMPLETE -->
