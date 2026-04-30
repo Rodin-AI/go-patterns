@@ -65,6 +65,49 @@ func TestParseSize(t *testing.T) {
 }
 ```
 
+### When NOT to Use
+
+**Don't use this when:**
+- You have 1–2 test cases with significantly different setup logic — a table adds indirection for no gain
+- Each case requires unique assertions or error-checking logic that can't be unified
+- The test is inherently sequential (step 2 depends on step 1's output)
+
+**Over-application example:**
+```go
+func TestMigration(t *testing.T) {
+    tests := []struct {
+        name string
+        // ... 15 fields for setup, teardown, assertions, side effects
+    }{
+        {"migrate v1 to v2", /* massive struct literal */},
+        {"migrate v2 to v3", /* completely different struct literal */},
+    }
+    for _, tt := range tests {
+        // 50 lines of conditional logic because each case is fundamentally different
+    }
+}
+```
+
+**Better alternative:**
+```go
+func TestMigrateV1ToV2(t *testing.T) {
+    // Clear, self-contained, readable
+    db := setupV1(t)
+    err := MigrateToV2(db)
+    // specific assertions for this migration
+}
+
+func TestMigrateV2ToV3(t *testing.T) {
+    db := setupV2(t)
+    err := MigrateToV3(db)
+    // different assertions entirely
+}
+```
+
+**Why:** Table-driven tests shine when cases share identical setup/assertion logic and differ
+only in inputs and expected outputs. When each "case" needs its own control flow, the table
+becomes a mini-DSL that's harder to read than separate functions.
+
 **Anti-pattern:** Writing individual assertions for each case, or copy-pasting test functions that differ by one input.
 
 **Code example (stdlib):**
@@ -357,6 +400,47 @@ func TestRenderTemplate(t *testing.T) {
 // Golden file lives at testdata/TestRenderTemplate.golden
 ```
 
+### When NOT to Use
+
+**Don't use this when:**
+- Expected output is short (< 5 lines) — inline it directly for readability
+- Output is non-deterministic (timestamps, random IDs, goroutine ordering) without normalization
+- The golden file would need updating on every minor refactor — brittle and noisy diffs
+
+**Over-application example:**
+```go
+// Golden file for a one-line output
+var update = flag.Bool("update", false, "update golden files")
+
+func TestVersion(t *testing.T) {
+    got := Version()
+    golden := "testdata/TestVersion.golden"
+    if *update {
+        os.WriteFile(golden, []byte(got), 0644)
+        return
+    }
+    want, _ := os.ReadFile(golden)
+    if got != string(want) {
+        t.Error("mismatch")
+    }
+}
+// testdata/TestVersion.golden contains: "v1.2.3"  — seriously?
+```
+
+**Better alternative:**
+```go
+func TestVersion(t *testing.T) {
+    got := Version()
+    if got != "v1.2.3" {
+        t.Errorf("Version() = %q, want %q", got, "v1.2.3")
+    }
+}
+```
+
+**Why:** Golden files add process overhead (the `-update` workflow, reviewing diffs in a separate
+file). For short, stable outputs, inline comparison is simpler, faster to read, and keeps the
+expected value next to the assertion.
+
 **Anti-pattern:** Comparing against inline expected strings that span 50+ lines, or manually constructing expected output.
 
 **Code example (stdlib):**
@@ -441,6 +525,45 @@ func TestHealthHandler(t *testing.T) {
     }
 }
 ```
+
+### When NOT to Use
+
+**Don't use this when:**
+- You need to test real HTTP behavior: TLS handshakes, connection pooling, timeouts, keep-alive
+- Your handler depends on server-level middleware (e.g., `http.Server.ConnContext`, TLS client certs)
+- You're testing client behavior or redirect-following (need a real URL to connect to)
+
+**Over-application example:**
+```go
+func TestClientRetries(t *testing.T) {
+    rec := httptest.NewRecorder()
+    // Can't test retry logic — there's no real server for the client to connect to!
+    // rec doesn't have a URL, no TCP, no connection reset simulation
+}
+```
+
+**Better alternative:**
+```go
+func TestClientRetries(t *testing.T) {
+    attempts := 0
+    srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        attempts++
+        if attempts < 3 {
+            w.WriteHeader(503)
+            return
+        }
+        w.WriteHeader(200)
+    }))
+    defer srv.Close()
+    // Now test the client's retry behavior against a real server
+    resp, err := myClient.Get(srv.URL + "/resource")
+    // ...
+}
+```
+
+**Why:** `httptest.NewRecorder` tests handler logic in isolation — it has no network, no URL,
+no connection lifecycle. When you need to test anything that crosses the network boundary
+(clients, retries, TLS, timeouts), you need `httptest.NewServer`.
 
 **Anti-pattern:** Spinning up a full server to test handler logic that doesn't need networking.
 

@@ -60,6 +60,45 @@ func countLines(r io.Reader) (int, error) {
 }
 ```
 
+
+### When NOT to Use
+
+**Don't use this when:**
+- You only have one implementation and no tests — you're adding indirection for no reason
+- The function genuinely needs multiple capabilities together (reading + seeking + closing)
+- You're creating an interface to match a single concrete type that you control
+
+**Over-application example:**
+```go
+// Interface with one implementation, no tests, no external consumers
+type Configurer interface {
+    LoadConfig(path string) (*Config, error)
+}
+
+type fileConfigurer struct{}
+
+func (f *fileConfigurer) LoadConfig(path string) (*Config, error) {
+    return parseFile(path)
+}
+
+func NewApp(c Configurer) *App {
+    // c is always *fileConfigurer — the interface adds nothing
+    return &App{cfg: c}
+}
+```
+
+**Better alternative:**
+```go
+// Just use the concrete type until you actually need the abstraction
+func NewApp(cfgPath string) *App {
+    cfg := parseFile(cfgPath)
+    return &App{cfg: cfg}
+}
+```
+
+**Why:** Interfaces in Go should be discovered through usage, not predicted. "Accept interfaces" means accept them at the *boundaries* where multiple types actually flow through. If you have one implementation and no tests that need a mock, you have a premature abstraction.
+
+
 ### Anti-pattern
 
 ```go
@@ -186,6 +225,38 @@ func NewLogger(w io.Writer) *Logger {
     return &Logger{out: w, level: "info"}
 }
 ```
+
+
+### When NOT to Use
+
+**Don't use this when:**
+- Your function is internal and only ever called with one concrete type
+- Returning an interface is genuinely better because the concrete type is an implementation detail that may change
+- The struct's exported fields would expose dangerous internals
+
+**Over-application example:**
+```go
+// Accepting an interface when only one concrete type makes sense
+func NewDatabaseMigrator(db interface {
+    Exec(query string, args ...any) (sql.Result, error)
+    Query(query string, args ...any) (*sql.Rows, error)
+    Begin() (*sql.Tx, error)
+}) *Migrator {
+    // This custom interface exactly matches *sql.DB — just accept *sql.DB
+    return &Migrator{db: db}
+}
+```
+
+**Better alternative:**
+```go
+// Accept the concrete type when the abstraction doesn't buy anything
+func NewDatabaseMigrator(db *sql.DB) *Migrator {
+    return &Migrator{db: db}
+}
+```
+
+**Why:** "Accept interfaces" doesn't mean "always accept interfaces." If you define a bespoke interface that matches exactly one concrete type and no one else will implement it, you've just added indirection. The guideline targets *standard* interfaces (io.Reader, io.Writer) that many types satisfy.
+
 
 ### Anti-pattern
 
@@ -317,6 +388,39 @@ pipeline.Use(ProcessorFunc(func(data []byte) error {
 }))
 ```
 
+
+### When NOT to Use
+
+**Don't use this when:**
+- The interface has more than one method — adapters only work for single-method interfaces
+- Implementations typically need state (struct fields) that closures would awkwardly close over
+- The function signature is complex enough that a named type with methods is clearer
+
+**Over-application example:**
+```go
+// Adapter for a multi-method interface — doesn't work
+type StorageFunc func(key string, data []byte) error
+
+func (f StorageFunc) Store(key string, data []byte) error { return f(key, data) }
+func (f StorageFunc) Load(key string) ([]byte, error)     { /* can't implement! */ }
+func (f StorageFunc) Delete(key string) error             { /* can't implement! */ }
+```
+
+**Better alternative:**
+```go
+// For multi-method interfaces, use a struct (or split the interface)
+type MemoryStorage struct {
+    data map[string][]byte
+}
+
+func (m *MemoryStorage) Store(key string, data []byte) error { ... }
+func (m *MemoryStorage) Load(key string) ([]byte, error)     { ... }
+func (m *MemoryStorage) Delete(key string) error             { ... }
+```
+
+**Why:** The adapter pattern bridges functions to interfaces. Functions have one signature, so adapters only work for single-method interfaces. If your interface has multiple methods, callers need a struct anyway — the adapter just adds confusion.
+
+
 ### Anti-pattern
 
 ```go
@@ -393,6 +497,55 @@ func refreshAll(s Store) {
     }
 }
 ```
+
+
+### When NOT to Use
+
+**Don't use this when:**
+- All implementations will always support the capability — just put it in the main interface
+- The capability is required for correctness, not just optimization
+- You have only 2-3 implementations and a simple interface split handles it better
+
+**Over-application example:**
+```go
+// Every HTTP handler MUST write a response — this isn't optional
+type Handler interface {
+    ServeHTTP(w ResponseWriter, r *Request)
+}
+
+// Don't make response-writing "optional"
+type ResponseWriter interface {
+    Header() Header
+}
+
+type BodyWriter interface {
+    Write([]byte) (int, error) // NOT optional — every response needs a body mechanism
+}
+
+func handle(w ResponseWriter) {
+    if bw, ok := w.(BodyWriter); ok { // wrong: Write is fundamental, not optional
+        bw.Write([]byte("hello"))
+    }
+}
+```
+
+**Better alternative:**
+```go
+// Write is fundamental — keep it in the core interface
+type ResponseWriter interface {
+    Header() Header
+    Write([]byte) (int, error)
+    WriteHeader(statusCode int)
+}
+
+// Only truly optional capabilities get separate interfaces
+type Flusher interface {
+    Flush()
+}
+```
+
+**Why:** Optional interfaces are for progressive enhancement — capabilities that some implementations support but others legitimately don't. If every implementation must support it for the system to work, it belongs in the core interface. Overusing type assertions makes code fragile and harder to reason about.
+
 
 ### Anti-pattern
 

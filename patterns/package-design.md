@@ -143,6 +143,32 @@ func InternalFormat(s string) Thing { ... } // only importable by pkg/mylib and 
 import "pkg/mylib/internal/parse" // ✓ allowed
 ```
 
+### When NOT to Use
+
+**Don't use `internal/` when:**
+- The code is only used by a single package (just keep it unexported in that package)
+- You're hiding code that *should* be public API — `internal/` isn't a staging area for "maybe later"
+- You have a flat package structure with no sub-packages (no one to share with)
+
+**Over-application example:**
+```go
+// pkg/mylib/internal/config/config.go
+package config
+
+// Only used by pkg/mylib itself — no sub-packages import this
+func DefaultTimeout() time.Duration { return 30 * time.Second }
+```
+
+**Better alternative:**
+```go
+// pkg/mylib/config.go — just make it unexported in the parent package
+package mylib
+
+func defaultTimeout() time.Duration { return 30 * time.Second }
+```
+
+**Why:** `internal/` adds directory structure complexity. If you have no sub-packages sharing the code, an unexported function in the parent package is simpler and achieves the same encapsulation.
+
 ### Anti-pattern
 
 ```go
@@ -245,6 +271,47 @@ func init() {
 // main.go — import for side-effect
 import _ "github.com/lib/pq" // driver registers itself
 ```
+
+### When NOT to Use
+
+**Don't use `init()` when:**
+- The initialization can fail (you can't return errors from `init()`)
+- The setup requires configuration or parameters (init takes no args)
+- You need to control initialization order across packages
+- It's a one-off application (not a library/driver) — just call setup in `main()`
+
+**Over-application example:**
+```go
+// internal/metrics/metrics.go
+func init() {
+    // Bad: init() hides this dependency, makes testing impossible,
+    // and panics if prometheus isn't reachable
+    prometheus.MustRegister(requestCounter)
+    prometheus.MustRegister(errorCounter)
+    prometheus.MustRegister(latencyHistogram)
+}
+```
+
+**Better alternative:**
+```go
+// internal/metrics/metrics.go
+func Register(reg prometheus.Registerer) error {
+    if err := reg.Register(requestCounter); err != nil {
+        return fmt.Errorf("registering request counter: %w", err)
+    }
+    // ...
+    return nil
+}
+
+// main.go
+func main() {
+    if err := metrics.Register(prometheus.DefaultRegisterer); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+**Why:** `init()` is invisible, untestable, and can't fail gracefully. Use it only when the registration pattern demands it (database/sql drivers, codec registration) and failure is impossible.
 
 ### Anti-pattern
 
@@ -485,6 +552,37 @@ func UserID(ctx context.Context) (int, bool) {
     return id, ok
 }
 ```
+
+### When NOT to Use
+
+**Don't use context values when:**
+- The data is a required function parameter (pass it explicitly)
+- The data controls behavior/logic (timeouts, retry counts) — use function args or config structs
+- You're using it to avoid refactoring function signatures
+- The value is large or expensive to retrieve (context isn't a cache)
+
+**Over-application example:**
+```go
+// Passing database connection through context — it's required everywhere!
+func HandleRequest(ctx context.Context) {
+    db := DatabaseFromContext(ctx) // nil if forgotten — runtime panic
+    users, err := db.Query(ctx, "SELECT ...")
+}
+```
+
+**Better alternative:**
+```go
+// Make the dependency explicit
+type Handler struct {
+    db *sql.DB
+}
+
+func (h *Handler) HandleRequest(ctx context.Context) {
+    users, err := h.db.QueryContext(ctx, "SELECT ...")
+}
+```
+
+**Why:** Context values are untyped, invisible in function signatures, and can silently be nil. They're meant for *request-scoped metadata* that crosses API boundaries (trace IDs, auth tokens), not for dependency injection or configuration.
 
 ### Anti-pattern
 

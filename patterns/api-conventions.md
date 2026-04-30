@@ -39,6 +39,41 @@ var emailRegex = regexp.MustCompile(`^[a-z]+@[a-z]+\.[a-z]+$`)
 // One line. Panics on typo (caught immediately in tests). Clean.
 ```
 
+### When NOT to Use
+
+**Don't use this when:**
+- The input is dynamic or user-provided (URL from a config file, regex from user input)
+- You're inside a request handler or any code path where panicking would crash the server
+- The error is recoverable — the caller should decide how to handle it
+
+**Over-application example:**
+```go
+func HandleSearch(w http.ResponseWriter, r *http.Request) {
+    pattern := r.URL.Query().Get("q")
+    re := regexp.MustCompile(pattern) // PANIC on invalid user input!
+    // One bad query crashes the entire server
+    matches := re.FindAllString(corpus, -1)
+    // ...
+}
+```
+
+**Better alternative:**
+```go
+func HandleSearch(w http.ResponseWriter, r *http.Request) {
+    pattern := r.URL.Query().Get("q")
+    re, err := regexp.Compile(pattern)
+    if err != nil {
+        http.Error(w, "invalid regex: "+err.Error(), 400)
+        return
+    }
+    matches := re.FindAllString(corpus, -1)
+    // ...
+}
+```
+
+**Why:** `Must` is for programmer errors caught at init time, not for runtime input.
+If the input can vary, the error is expected and must be handled — not panicked on.
+
 **Anti-pattern:** Using Must in runtime code where the input is dynamic/user-provided;
 panicking on recoverable errors; naming it something other than Must (e.g., `PanicOnError`).
 
@@ -260,6 +295,36 @@ f, err := os.Open("data.json") // just reads — no flags to remember
 f, err := os.OpenFile("data.json", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 ```
 
+### When NOT to Use
+
+**Don't use this when:**
+- There's no clear "common case" — all callers need different flag combinations
+- The convenience wrapper would hide important behavior (e.g., `Create` hides truncation — some callers are surprised)
+- You have 2+ equally common usage patterns that would each need their own wrapper, leading to an explosion of functions
+
+**Over-application example:**
+```go
+// Too many convenience wrappers — which one do I want?
+func OpenForAppend(name string) (*File, error) { ... }
+func OpenOrCreate(name string) (*File, error) { ... }
+func OpenReadWrite(name string) (*File, error) { ... }
+func OpenExclusive(name string) (*File, error) { ... }
+// Users now have to remember 6 functions instead of learning 1 + flags
+```
+
+**Better alternative:**
+```go
+// One convenience for the overwhelmingly common case, full-power for the rest
+func Open(name string) (*File, error) { return OpenFile(name, O_RDONLY, 0) }
+func Create(name string) (*File, error) { return OpenFile(name, O_RDWR|O_CREATE|O_TRUNC, 0666) }
+func OpenFile(name string, flag int, perm FileMode) (*File, error) { ... }
+// Only 2 convenience wrappers for the 2 dominant patterns. Everything else uses OpenFile.
+```
+
+**Why:** Layered APIs work when there's a clear 80/20 split. If you're writing a convenience
+wrapper for every combination, you've just created a larger API surface that's harder to
+navigate than the single configurable function.
+
 **Anti-pattern:** Only exposing the full-power version; making users learn flag
 constants for simple reads; duplicating implementation across convenience functions.
 
@@ -401,6 +466,39 @@ func (s *Server) Shutdown(ctx context.Context) error {
     }
 }
 ```
+
+### When NOT to Use
+
+**Don't use this when:**
+- Your type doesn't manage long-lived resources (a pure data struct, a stateless transformer)
+- Shutdown order doesn't matter — a simple `Close()` suffices
+- You're building a CLI tool that exits the process — `os.Exit` is your shutdown
+
+**Over-application example:**
+```go
+// Graceful shutdown for a type that holds no connections
+type Calculator struct {
+    precision int
+}
+
+func (c *Calculator) Shutdown(ctx context.Context) error {
+    // ... nothing to drain, nothing to close
+    return nil
+}
+```
+
+**Better alternative:**
+```go
+// No shutdown needed — the GC handles it. Maybe a Reset() if you want to reuse.
+type Calculator struct {
+    precision int
+}
+```
+
+**Why:** The Close/Shutdown duality exists for types that own goroutines, connections, or
+file descriptors that outlive individual method calls. If your type is just data and methods,
+adding shutdown ceremony is over-engineering that confuses users into thinking there are
+hidden resources to manage.
 
 **Anti-pattern:** Only providing one shutdown mode; not accepting a context for
 timeout control; leaking goroutines on shutdown.

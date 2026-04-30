@@ -46,6 +46,40 @@ func (c *Cache) Set(k string, v []byte) {
 }
 ```
 
+### When NOT to Use
+
+**Don't use this when:**
+- The type has mandatory dependencies that *must* be provided (a DB connection, an io.Reader with no sensible default)
+- The zero value would be dangerous rather than merely useless (e.g., a zero-value security config that disables auth)
+- Lazy initialization adds per-call overhead on a hot path and the constructor is called once
+
+**Over-application example:**
+```go
+// Trying to make a DB-backed store zero-value ready
+type UserStore struct {
+    db *sql.DB // nil means... what? No sensible default exists.
+}
+
+func (s *UserStore) Get(id int) (*User, error) {
+    if s.db == nil {
+        return nil, errors.New("no database configured") // every call pays for nil check
+    }
+    // ...
+}
+```
+
+**Better alternative:**
+```go
+// A constructor makes the requirement explicit
+func NewUserStore(db *sql.DB) *UserStore {
+    return &UserStore{db: db}
+}
+```
+
+**Why:** When there's no meaningful default for a dependency, forcing zero-value usability
+just moves the error from compile time (missing argument) to runtime (nil check on every call).
+Use a constructor instead.
+
 **Anti-pattern:** Requiring a constructor for basic use; panicking on zero-value use;
 requiring all fields be set before the type is functional.
 
@@ -182,6 +216,35 @@ func NewParser(input io.Reader) *Parser {
 p := NewParser(file)
 ```
 
+### When NOT to Use
+
+**Don't use this when:**
+- The type's zero value is already useful — adding a constructor creates unnecessary ceremony
+- Your constructor takes 5+ optional parameters (use a config struct instead)
+- The "mandatory dependency" is actually optional and has a sensible default (e.g., a logger defaulting to `slog.Default()`)
+
+**Over-application example:**
+```go
+// Constructor for something that doesn't need one
+func NewCounter() *Counter {
+    return &Counter{count: 0} // zero value already does this!
+}
+
+// Forces users to write:
+c := NewCounter()
+```
+
+**Better alternative:**
+```go
+type Counter struct {
+    count int64
+}
+// Users write: var c Counter — done.
+```
+
+**Why:** If the zero value works, a constructor is just noise. It obscures the type's
+actual simplicity and makes users wonder what hidden initialization they're missing.
+
 **Anti-pattern:** Forcing users to manually set unexported fields; having a constructor
 that takes 10 optional parameters (use config struct instead); requiring New when
 zero value would suffice.
@@ -299,6 +362,41 @@ type ServerConfig struct {
 
 func NewServer(cfg ServerConfig) *Server { ... }
 ```
+
+### When NOT to Use
+
+**Don't use this when:**
+- You only have 1–2 options — just use function parameters
+- The options are truly required (not optional) — they belong in the constructor signature
+- Your config struct has methods or behavior — it's no longer a plain config, it's becoming a type
+
+**Over-application example:**
+```go
+// Config struct for two required parameters
+type ClientConfig struct {
+    BaseURL string // required!
+    APIKey  string // required!
+}
+
+func NewClient(cfg ClientConfig) (*Client, error) {
+    if cfg.BaseURL == "" { return nil, errors.New("base URL required") }
+    if cfg.APIKey == "" { return nil, errors.New("API key required") }
+    // ...
+}
+```
+
+**Better alternative:**
+```go
+// Required params are function args; only truly optional things go in a config
+func NewClient(baseURL, apiKey string, opts *ClientOptions) (*Client, error) {
+    // baseURL and apiKey are enforced by the signature
+    // opts can be nil for defaults
+}
+```
+
+**Why:** Config structs shine for *optional* configuration. When fields are required,
+the compiler can't enforce them — you end up validating at runtime what the type system
+could have caught. Keep required parameters as explicit function arguments.
 
 **Anti-pattern:** Undocumented fields; requiring all fields set; using sentinel values
 other than zero/nil for defaults; providing setters when direct assignment works.
