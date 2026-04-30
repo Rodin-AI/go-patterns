@@ -137,6 +137,33 @@ type MyWriter struct{ buf bytes.Buffer }
 func (w *MyWriter) Write(p []byte) (int, error) { return w.buf.Write(p) }
 ```
 
+**When NOT to Use**
+
+**Don't use interface compliance checks when:**
+- The type is unexported AND only used locally (the compiler catches it at the call site anyway)
+- You're asserting against an interface you don't own and it changes frequently (creates churn)
+- The interface is implemented implicitly and you're just cargo-culting the pattern for every type
+
+**Over-application example:**
+```go
+// Every single struct gets a compliance check, even trivial unexported ones
+var _ fmt.Stringer = (*internalHelper)(nil)  // only used in one function in this file
+var _ fmt.Stringer = (*anotherHelper)(nil)   // also never passed as Stringer anywhere
+```
+
+**Better alternative:**
+```go
+// Skip the check for types that are only used locally — the compiler
+// will catch the issue at the point of use:
+func printThing(s fmt.Stringer) { fmt.Println(s.String()) }
+printThing(&internalHelper{}) // compiler error here if String() is missing
+
+// DO use it for exported types that implement external interfaces:
+var _ io.ReadWriteCloser = (*MyConnection)(nil)  // users depend on this contract
+```
+
+**Why:** The pattern exists for API contracts — types that *must* satisfy an interface for consumers. For unexported types used only locally, the compiler already catches mismatches at the call site. Adding the check everywhere is noise.
+
 **Anti-pattern:** Relying on tests to catch interface conformance; skipping the check
 and discovering the mismatch at runtime; using reflection.
 
@@ -372,6 +399,37 @@ func SetLogLevel(level LogLevel) { ... }
 SetLogLevel(LevelWarn) // self-documenting
 ```
 
+**When NOT to Use**
+
+**Don't use typed constants with iota when:**
+- The values have external meaning (HTTP status codes, exit codes, protocol bytes) — use explicit values
+- The set is not exhaustive or will have gaps (iota assigns sequential values; gaps require explicit assignment)
+- You need the constant to interoperate with untyped int APIs without casting everywhere
+
+**Over-application example:**
+```go
+type HTTPStatus int
+
+const (
+    StatusOK HTTPStatus = iota  // 0?! HTTP 200 is not 0
+    StatusNotFound              // 1?! Should be 404
+    StatusServerError           // 2?! Should be 500
+)
+```
+
+**Better alternative:**
+```go
+type HTTPStatus int
+
+const (
+    StatusOK           HTTPStatus = 200
+    StatusNotFound     HTTPStatus = 404
+    StatusServerError  HTTPStatus = 500
+)
+```
+
+**Why:** `iota` is for sequential enumerations where the actual numeric value doesn't matter (only the distinctness matters). When values have external meaning (wire protocols, HTTP, exit codes), use explicit values.
+
 **Anti-pattern:** Untyped numeric constants; separate `const` declarations for related
 values; using raw integers in function signatures.
 
@@ -469,6 +527,39 @@ func SetRetries(n RetryCount) { ... }
 SetTimeout(Timeout(5 * time.Second))   // explicit units
 SetRetries(RetryCount(3))              // can't swap — different types
 ```
+
+**When NOT to Use**
+
+**Don't create named types when:**
+- The primitive is only used in one place (over-engineering for a single call site)
+- The type would need constant casting back to the primitive for stdlib interop
+- The semantic meaning is already clear from the parameter name (`func Sleep(seconds int)` in a script is fine)
+
+**Over-application example:**
+```go
+type Port uint16
+type Host string
+type Path string
+
+// Now every function that takes these needs explicit construction:
+func Connect(h Host, p Port, path Path) { ... }
+Connect(Host("localhost"), Port(8080), Path("/api"))  // ceremony for no safety gain
+```
+
+**Better alternative:**
+```go
+// For simple configurations, a struct with named fields provides clarity without type ceremony:
+type Endpoint struct {
+    Host string
+    Port uint16
+    Path string
+}
+
+func Connect(ep Endpoint) { ... }
+Connect(Endpoint{Host: "localhost", Port: 8080, Path: "/api"})
+```
+
+**Why:** Named types shine when you need methods, when confusion between units causes real bugs (seconds vs milliseconds), or when the type system should prevent mixing semantically different values of the same primitive. If you're just adding type annotations to strings that don't interact, you're adding ceremony without safety.
 
 **Anti-pattern:** Using raw `int64` for durations; accepting `int` parameters for
 time intervals; mixing units (milliseconds in one place, seconds in another).

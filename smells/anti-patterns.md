@@ -44,6 +44,26 @@ client.Update(ctx, copy)
 
 **Evidence:** The `runtime.Object` interface *mandates* `DeepCopyObject()`. Every API type has generated deep copy methods. The entire architecture assumes immutable reads.
 
+### Exceptions (When This Rule Doesn't Apply)
+
+**Acceptable to skip deep copy when:**
+- You're only *reading* fields, never mutating the object
+- The object was just created locally (not from a shared cache) and hasn't been shared yet
+- You're inside a test where the cache is a mock/fake with no other consumers
+- Performance profiling shows deep copy is a measurable bottleneck AND you can prove no concurrent readers exist
+
+**Acceptable-use example:**
+```go
+// Reading only — no mutation, no copy needed
+deployment, _ := dc.dLister.Deployments(ns).Get(name)
+if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == 0 {
+    logger.Info("deployment scaled to zero", "name", name)
+    return nil  // just reading, never modified the object
+}
+```
+
+**Why this is fine:** Deep copy has a cost (allocation + GC pressure). If you're only reading fields to make decisions and never writing to the object, the cache stays unmodified and other consumers are unaffected.
+
 ---
 
 ## 2. Never Process the Same Key Concurrently
@@ -106,6 +126,32 @@ func (dc *DeploymentController) syncDeployment(ctx context.Context, key string) 
     // Reconcile difference
 }
 ```
+
+### Exceptions (When This Rule Doesn't Apply)
+
+**Edge-triggered logic is acceptable when:**
+- You're implementing audit logging or event sourcing (recording *what happened* is the goal, not reconciling state)
+- The event carries information that isn't available from current state (e.g., "who deleted this" from the delete event's user context)
+- You're optimizing a hot path where full reconciliation is too expensive, AND you have a periodic full-sync as a safety net
+
+**Acceptable-use example:**
+```go
+// Audit logging — we WANT to record the specific event, not just current state
+func onPodDeleted(pod *v1.Pod) {
+    auditLog.Record(AuditEvent{
+        Action:    "delete",
+        Resource:  pod.Name,
+        DeletedBy: pod.Annotations["deleted-by"],
+        Timestamp: time.Now(),
+    })
+}
+// This is fine because:
+// 1. The goal is recording history, not maintaining correct state
+// 2. A missed event means a missing audit entry (acceptable, not corrupt state)
+// 3. The actual replica count is still reconciled level-triggered elsewhere
+```
+
+**Why this is fine:** Level-triggered reconciliation is about *correctness of state*. Audit logs, metrics counters, and notification systems have different requirements — they genuinely need to know *what happened*, not just *what is*.
 
 ---
 
