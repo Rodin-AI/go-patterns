@@ -71,6 +71,41 @@ func (dc *DeploymentController) handleErr(ctx context.Context, err error, key st
 }
 ```
 
+### When to Use
+
+**Triggers:**
+- You're building a system that must maintain desired state over time (not just react to events once)
+- External state can change outside your control (user edits, crashes, network partitions)
+- You need automatic recovery from partial failures without human intervention
+
+**Example — before:**
+```go
+// Event-driven: reacts once and hopes nothing changes
+func handlePodCreated(pod Pod) {
+    assignToNode(pod)
+    // What if the node dies 5 seconds later? Nobody re-assigns.
+}
+```
+
+**Example — after:**
+```go
+// Controller pattern: continuously reconciles desired vs actual
+func (c *Scheduler) Reconcile(ctx context.Context, key string) error {
+    pod, err := c.podLister.Get(key)
+    if err != nil { return err }
+    
+    if pod.Spec.NodeName == "" {
+        node := c.selectBestNode(pod)
+        return c.assignPodToNode(ctx, pod, node)
+    }
+    // Already assigned — verify node is still healthy
+    if !c.nodeIsReady(pod.Spec.NodeName) {
+        return c.reassignPod(ctx, pod)
+    }
+    return nil // desired state matches actual state
+}
+```
+
 ### Key Properties
 1. **Level-triggered, not edge-triggered** — the sync loop reads current state, not diffs
 2. **Idempotent** — running sync twice produces the same result
@@ -161,6 +196,51 @@ A concurrent-safe work queue with three critical properties:
 
 ### Why
 In a controller, multiple events may fire for the same object in rapid succession. Without deduplication, you'd process stale intermediate states. The dirty/processing set design ensures you always process the latest state while never losing notifications.
+
+### When to Use
+
+**Triggers:**
+- Multiple event sources (informer callbacks) trigger work on the same object rapidly
+- You need to deduplicate: 5 events for the same pod should result in 1 sync, not 5
+- Failed processing should retry with exponential backoff, not flood the system
+
+**Example — before:**
+```go
+// Raw channel: no deduplication, no backoff
+events := make(chan string, 100)
+
+// Producer fires rapid updates:
+events <- "pod-abc" // event 1
+events <- "pod-abc" // event 2 (duplicate!)
+events <- "pod-abc" // event 3 (duplicate!)
+
+// Consumer processes all 3 — wasteful
+for key := range events {
+    reconcile(key) // called 3 times for the same stale state
+}
+```
+
+**Example — after:**
+```go
+queue := workqueue.NewTypedRateLimitingQueue[string](
+    workqueue.DefaultTypedControllerRateLimiter[string](),
+)
+
+// Producer fires rapid updates — queue deduplicates:
+queue.Add("pod-abc") // queued
+queue.Add("pod-abc") // already dirty — no-op
+queue.Add("pod-abc") // already dirty — no-op
+
+// Consumer processes once with latest state:
+key, _ := queue.Get()
+err := reconcile(key) // called once
+if err != nil {
+    queue.AddRateLimited(key) // retry with backoff
+} else {
+    queue.Forget(key) // clear backoff counter
+}
+queue.Done(key)
+```
 
 ### The Dirty/Processing Dance
 
@@ -320,6 +400,43 @@ func (m *BaseControllerRefManager) ClaimObject(ctx context.Context, obj metav1.O
 
 ### What it does
 Provides distributed mutex semantics using a Kubernetes resource (Lease) as the lock. Only one instance of a controller runs actively; others are hot standbys.
+
+### When to Use
+
+**Triggers:**
+- You're running multiple replicas of a controller for high availability
+- Only ONE instance should actively reconcile at a time (to avoid conflicts)
+- You need automatic failover: if the leader dies, another replica takes over within seconds
+
+**Example — before:**
+```go
+// All replicas reconcile simultaneously → write conflicts, duplicate work
+func main() {
+    ctrl := NewController()
+    ctrl.Run(ctx) // every replica does this — chaos
+}
+```
+
+**Example — after:**
+```go
+func main() {
+    ctrl := NewController()
+    leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+        Lock:          resourceLock,
+        LeaseDuration: 15 * time.Second,
+        RenewDeadline: 10 * time.Second,
+        RetryPeriod:   2 * time.Second,
+        Callbacks: leaderelection.LeaderCallbacks{
+            OnStartedLeading: func(ctx context.Context) {
+                ctrl.Run(ctx) // only the leader reconciles
+            },
+            OnStoppedLeading: func() {
+                log.Fatal("lost leadership") // restart to re-enter election
+            },
+        },
+    })
+}
+```
 
 ### Why
 Controller-manager runs multiple replicas for HA. Only one should reconcile to avoid conflicts.

@@ -168,6 +168,35 @@ an `// Output:` comment that `go test` verifies.
 in `go doc` and pkg.go.dev alongside the relevant symbol. They teach by showing
 real, working code.
 
+**When to Use**
+
+**Triggers:**
+- You have a public function/type whose usage isn't obvious from the signature alone
+- Your README examples have drifted from the actual API (broken examples in docs)
+- You want examples that appear on pkg.go.dev AND are verified by `go test`
+
+**Example — before:**
+```go
+// README.md (may be stale):
+// ```go
+// result := mylib.Process("input")
+// fmt.Println(result.Data)
+// ```
+// ← compiles? who knows. API changed last month.
+```
+
+**Example — after:**
+```go
+// example_test.go
+func ExampleProcess() {
+    result := mylib.Process("input")
+    fmt.Println(result.Data)
+    // Output:
+    // processed: input
+}
+// ← go test verifies this compiles and produces the expected output
+```
+
 **Anti-pattern:** Examples that don't compile; examples without Output comments
 (not verified); examples in README that drift from reality.
 
@@ -265,6 +294,30 @@ deprecated and explains what to use instead.
 
 **Why:** Recognized by tooling (go vet, staticcheck, IDEs). Provides a migration
 path without breaking backward compatibility.
+
+**When to Use**
+
+**Triggers:**
+- You have a better replacement for an existing function but can't remove the old one (semver)
+- Users are still calling a function that has known issues or a superior alternative
+- You want IDEs to show a strikethrough and linters to warn on usage
+
+**Example — before:**
+```go
+// Just delete it? Breaks everyone's code.
+// Leave it silently? Users never learn about the better way.
+```
+
+**Example — after:**
+```go
+// ParseDuration parses a duration string.
+//
+// Deprecated: Use [time.ParseDuration] instead, which handles
+// all standard duration formats.
+func ParseDuration(s string) (time.Duration, error) {
+    return time.ParseDuration(s) // delegate to the replacement
+}
+```
 
 **Anti-pattern:** Removing deprecated APIs (breaks semver); deprecating without
 suggesting an alternative; using non-standard deprecation markers.

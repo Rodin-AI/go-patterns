@@ -31,6 +31,35 @@ type Closer interface {
 
 Small interfaces are easy to implement and easy to compose. Any type can satisfy `io.Reader` by implementing a single method. This maximizes the number of types that can participate in the ecosystem — files, network connections, buffers, compressors, encryptors all satisfy `Reader`.
 
+### When to Use
+
+**Triggers:**
+- You're defining a function that only needs ONE capability from its argument (reading, writing, closing)
+- You want maximum reusability — many different types should be able to satisfy your requirement
+- You're tempted to create a big interface but realize most consumers only use 1-2 methods
+
+**Example — before:**
+```go
+// Accepts only *os.File — can't use with buffers, HTTP bodies, test mocks
+func countLines(f *os.File) (int, error) {
+    scanner := bufio.NewScanner(f)
+    count := 0
+    for scanner.Scan() { count++ }
+    return count, scanner.Err()
+}
+```
+
+**Example — after:**
+```go
+// Accepts io.Reader — works with files, HTTP bodies, strings.NewReader, gzip.Reader, etc.
+func countLines(r io.Reader) (int, error) {
+    scanner := bufio.NewScanner(r)
+    count := 0
+    for scanner.Scan() { count++ }
+    return count, scanner.Err()
+}
+```
+
 ### Anti-pattern
 
 ```go
@@ -127,6 +156,37 @@ func TeeReader(r Reader, w Writer) Reader {
 
 The return type of `LimitReader` is `Reader` (interface), but the underlying value is `*LimitedReader` (struct). Functions like `io.Copy` can type-assert to `*LimitedReader` to optimize buffer sizes (line 425).
 
+### When to Use
+
+**Triggers:**
+- You're writing a function/constructor that operates on a capability (reading, hashing, connecting)
+- Your return type has useful fields or methods beyond the interface contract
+- You want callers to pass anything that satisfies the contract, but return something concrete they can inspect
+
+**Example — before:**
+```go
+// Too restrictive input, too vague output
+func NewLogger(f *os.File) io.Writer {
+    return &logger{out: f, level: "info"} // hides SetLevel, Flush methods
+}
+```
+
+**Example — after:**
+```go
+type Logger struct {
+    out   io.Writer
+    level string
+}
+
+func (l *Logger) SetLevel(lvl string) { l.level = lvl }
+func (l *Logger) Flush() error { /* ... */ }
+
+// Accept interface (any io.Writer), return struct (full access)
+func NewLogger(w io.Writer) *Logger {
+    return &Logger{out: w, level: "info"}
+}
+```
+
 ### Anti-pattern
 
 ```go
@@ -218,6 +278,45 @@ func (f HandlerFunc) ServeHTTP(w ResponseWriter, r *Request) {
 
 This bridges functions and interfaces. Any function with the right signature becomes a `Handler` via `HandlerFunc(myFunc)`. You get the simplicity of functions with the composability of interfaces.
 
+### When to Use
+
+**Triggers:**
+- You have an interface with a single method and users frequently implement it with a bare function
+- You want to accept both struct-based and function-based implementations of the same behavior
+- Requiring a struct definition for simple cases feels like boilerplate
+
+**Example — before:**
+```go
+type Processor interface {
+    Process(data []byte) error
+}
+
+// User must create a whole struct just to use a function
+type upperProcessor struct{}
+func (u upperProcessor) Process(data []byte) error {
+    fmt.Println(strings.ToUpper(string(data)))
+    return nil
+}
+```
+
+**Example — after:**
+```go
+type Processor interface {
+    Process(data []byte) error
+}
+
+// Adapter: any function with the right signature becomes a Processor
+type ProcessorFunc func([]byte) error
+
+func (f ProcessorFunc) Process(data []byte) error { return f(data) }
+
+// Now users can write:
+pipeline.Use(ProcessorFunc(func(data []byte) error {
+    fmt.Println(strings.ToUpper(string(data)))
+    return nil
+}))
+```
+
 ### Anti-pattern
 
 ```go
@@ -258,6 +357,42 @@ if flusher, ok := w.(Flusher); ok {
 ### Why
 
 Not every `ResponseWriter` supports flushing or hijacking (HTTP/2 doesn't support Hijacker). Instead of bloating the main interface, optional capabilities are separate interfaces checked at runtime. This keeps the core interface small while allowing progressive enhancement.
+
+### When to Use
+
+**Triggers:**
+- Some implementations support a capability but others don't (flushing, hijacking, seeking)
+- You want to keep the core interface small but allow optimizations when available
+- You're writing middleware that should enhance behavior when possible, not require it
+
+**Example — before:**
+```go
+// Forces ALL stores to implement caching, even simple ones
+type Store interface {
+    Get(key string) ([]byte, error)
+    Set(key string, val []byte) error
+    InvalidateCache() error  // not all stores have a cache!
+}
+```
+
+**Example — after:**
+```go
+type Store interface {
+    Get(key string) ([]byte, error)
+    Set(key string, val []byte) error
+}
+
+// Optional capability — check at runtime
+type Cacheable interface {
+    InvalidateCache() error
+}
+
+func refreshAll(s Store) {
+    if c, ok := s.(Cacheable); ok {
+        c.InvalidateCache() // only if supported
+    }
+}
+```
 
 ### Anti-pattern
 

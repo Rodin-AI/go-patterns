@@ -13,6 +13,32 @@ is non-nil. Named `MustXxx` or `Must` (when wrapping a generic `(T, error)` pair
 `var` initializers can't handle errors, `Must` converts programmer errors (bad
 regex literals, bad templates) into immediate panics that surface during init.
 
+**When to Use**
+
+**Triggers:**
+- You're initializing a package-level variable with a value that is known at compile time (regex, template, URL)
+- Failure means a programmer bug, not a runtime condition (the regex literal is wrong, not user input)
+- `var` initialization can't handle the `(T, error)` return
+
+**Example — before:**
+```go
+var emailRegex *regexp.Regexp
+
+func init() {
+    var err error
+    emailRegex, err = regexp.Compile(`^[a-z]+@[a-z]+\.[a-z]+$`)
+    if err != nil {
+        panic(err) // manual panic, verbose
+    }
+}
+```
+
+**Example — after:**
+```go
+var emailRegex = regexp.MustCompile(`^[a-z]+@[a-z]+\.[a-z]+$`)
+// One line. Panics on typo (caught immediately in tests). Clean.
+```
+
 **Anti-pattern:** Using Must in runtime code where the input is dynamic/user-provided;
 panicking on recoverable errors; naming it something other than Must (e.g., `PanicOnError`).
 
@@ -211,6 +237,29 @@ func (b *Builder) String() string {
 **Why:** 90% of file opens are reads or creates. Layered APIs serve the common case
 without hiding power. The naming makes intent clear.
 
+**When to Use**
+
+**Triggers:**
+- 90% of callers need the simple case (open for read, create and truncate)
+- You have a powerful function with many flags/options but most combinations are rare
+- You find yourself writing the same flag combination repeatedly in calling code
+
+**Example — before:**
+```go
+// User must know about flags for every file open
+f, err := os.OpenFile("data.json", os.O_RDONLY, 0)
+// Every. Single. Time.
+```
+
+**Example — after:**
+```go
+// Simple case:
+f, err := os.Open("data.json") // just reads — no flags to remember
+
+// Power case (when you actually need it):
+f, err := os.OpenFile("data.json", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+```
+
 **Anti-pattern:** Only exposing the full-power version; making users learn flag
 constants for simple reads; duplicating implementation across convenience functions.
 
@@ -310,6 +359,48 @@ timeout mechanism.
 **Why:** Different operational scenarios need different termination semantics.
 Graceful shutdown is critical for production services; immediate close is needed for
 tests and emergency stops.
+
+**When to Use**
+
+**Triggers:**
+- Your type manages long-lived connections or in-flight requests
+- You need both "stop now" (tests, emergencies) and "drain gracefully" (deploys, SIGTERM)
+- A `Close()` that waits forever would make tests hang
+
+**Example — before:**
+```go
+type Server struct { listener net.Listener }
+
+func (s *Server) Stop() {
+    s.listener.Close() // all in-flight requests get connection reset — data loss
+}
+```
+
+**Example — after:**
+```go
+type Server struct {
+    listener net.Listener
+    active   sync.WaitGroup
+}
+
+// Immediate: drop everything
+func (s *Server) Close() error {
+    return s.listener.Close()
+}
+
+// Graceful: stop accepting, wait for in-flight with timeout
+func (s *Server) Shutdown(ctx context.Context) error {
+    s.listener.Close()     // stop accepting new connections
+    done := make(chan struct{})
+    go func() { s.active.Wait(); close(done) }()
+    select {
+    case <-done:
+        return nil          // all requests finished
+    case <-ctx.Done():
+        return ctx.Err()   // timed out — caller decides what to do
+    }
+}
+```
 
 **Anti-pattern:** Only providing one shutdown mode; not accepting a context for
 timeout control; leaking goroutines on shutdown.

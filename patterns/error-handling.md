@@ -36,6 +36,44 @@ if err == io.EOF {
 
 **Critical rule from io.EOF's doc comment**: Read must return EOF itself, **not an error wrapping EOF**, because callers test for it with `==`. This is the distinction between sentinel errors (identity-checked) and wrapped errors (tree-checked).
 
+### When to Use
+
+**Triggers:**
+- You have a specific, well-known failure condition callers need to check by identity
+- Multiple packages compare against the same error value (`io.EOF`, `sql.ErrNoRows`)
+- The error represents a **state** ("end of stream", "not found"), not a bug
+
+**Example — before:**
+```go
+func fetchUser(id int) (*User, error) {
+    row := db.QueryRow("SELECT ...")
+    var u User
+    err := row.Scan(&u.Name)
+    if err != nil {
+        return nil, fmt.Errorf("user not found") // caller can't distinguish "not found" from "db down"
+    }
+    return &u, nil
+}
+```
+
+**Example — after:**
+```go
+var ErrUserNotFound = errors.New("users: not found")
+
+func fetchUser(id int) (*User, error) {
+    row := db.QueryRow("SELECT ...")
+    var u User
+    err := row.Scan(&u.Name)
+    if errors.Is(err, sql.ErrNoRows) {
+        return nil, ErrUserNotFound // sentinel: callers can test with errors.Is
+    }
+    if err != nil {
+        return nil, fmt.Errorf("fetchUser: %w", err)
+    }
+    return &u, nil
+}
+```
+
 ### Anti-pattern
 
 ```go
@@ -135,6 +173,43 @@ return fmt.Errorf("open config: %w", err)
 
 // Does NOT wrap: hides the original error
 return fmt.Errorf("open config: %v", err)
+```
+
+### When to Use
+
+**Triggers:**
+- You're adding context to an error before returning it up the call stack
+- The caller's error message would be meaningless without knowing *what* operation failed
+- You have a chain of function calls and want a readable error trail: `"open config: read file: permission denied"`
+
+**Example — before:**
+```go
+func loadConfig(path string) (*Config, error) {
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, err // caller sees "open /etc/app.conf: permission denied" — no context about WHO called ReadFile
+    }
+    var cfg Config
+    if err := json.Unmarshal(data, &cfg); err != nil {
+        return nil, err // caller can't tell if this was a read error or a parse error
+    }
+    return &cfg, nil
+}
+```
+
+**Example — after:**
+```go
+func loadConfig(path string) (*Config, error) {
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, fmt.Errorf("load config: %w", err) // wraps: callers can errors.Is(err, os.ErrNotExist)
+    }
+    var cfg Config
+    if err := json.Unmarshal(data, &cfg); err != nil {
+        return nil, fmt.Errorf("load config: parse %s: %v", path, err) // %v: hides internal JSON error type
+    }
+    return &cfg, nil
+}
 ```
 
 ### When to use %w vs %v
@@ -311,6 +386,37 @@ var errs []error
 errs = append(errs, closeDB())
 errs = append(errs, closeCache())
 return errors.Join(errs...)  // nil if all nil
+```
+
+### When to Use
+
+**Triggers:**
+- You're closing/cleaning up multiple resources and each can fail independently
+- A validation function checks multiple fields and you want ALL errors, not just the first
+- You're running parallel operations and collecting errors from each
+
+**Example — before:**
+```go
+func cleanup(db *sql.DB, cache *redis.Client, file *os.File) error {
+    if err := db.Close(); err != nil {
+        return err // stops here — cache and file leak!
+    }
+    if err := cache.Close(); err != nil {
+        return err // file still leaks
+    }
+    return file.Close()
+}
+```
+
+**Example — after:**
+```go
+func cleanup(db *sql.DB, cache *redis.Client, file *os.File) error {
+    return errors.Join(
+        db.Close(),
+        cache.Close(),
+        file.Close(),
+    ) // nil if all nil; contains all failures otherwise
+}
 ```
 
 ### Anti-pattern

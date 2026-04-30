@@ -38,6 +38,39 @@ func (m *Mutex) Lock() {
 - **Not associated with a goroutine** — one goroutine can Lock, another can Unlock
 - **Locker interface** — abstracts over Mutex and RWMutex
 
+### When to Use
+
+**Triggers:**
+- Multiple goroutines read AND write the same data structure
+- You need to protect a small critical section (a few field accesses)
+- A channel-based solution would add complexity without benefit (no coordination needed, just protection)
+
+**Example — before:**
+```go
+type Stats struct {
+    hits   int
+    misses int
+}
+
+func (s *Stats) RecordHit()  { s.hits++ }   // DATA RACE when called from multiple goroutines
+func (s *Stats) RecordMiss() { s.misses++ } // DATA RACE
+```
+
+**Example — after:**
+```go
+type Stats struct {
+    mu     sync.Mutex
+    hits   int
+    misses int
+}
+
+func (s *Stats) RecordHit() {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+    s.hits++
+}
+```
+
 ### Idiomatic Usage
 
 ```go
@@ -100,6 +133,40 @@ func (o *Once) doSlow(f func()) {
 The implementation reveals a subtle guarantee: **when Do returns, f has finished**. The naive CAS-only approach (documented in comment at line 56-63) would let the second caller return before f completes. The mutex ensures all callers wait.
 
 The `done` field is first in the struct for hot-path performance on amd64/386 (noted in comment at line 24-27).
+
+### When to Use
+
+**Triggers:**
+- You have expensive initialization that should happen exactly once (DB connection, config parse, compiled regex)
+- Multiple goroutines may trigger the initialization concurrently
+- You're using `var` + `if instance == nil` checks that aren't goroutine-safe
+
+**Example — before:**
+```go
+var db *sql.DB
+
+func GetDB() *sql.DB {
+    if db == nil { // RACE: two goroutines can both see nil
+        db, _ = sql.Open("postgres", connStr)
+    }
+    return db
+}
+```
+
+**Example — after:**
+```go
+var (
+    db   *sql.DB
+    once sync.Once
+)
+
+func GetDB() *sql.DB {
+    once.Do(func() {
+        db, _ = sql.Open("postgres", connStr)
+    })
+    return db
+}
+```
 
 ### Idiomatic Usage
 
@@ -297,6 +364,51 @@ case result := <-work:
 }
 ```
 
+### When to Use
+
+**Triggers:**
+- You need to broadcast "stop" to multiple goroutines simultaneously
+- A goroutine needs to select between work and cancellation
+- You're implementing graceful shutdown for a long-running service
+
+**Example — before:**
+```go
+type Server struct {
+    stopped bool // RACE: no synchronization
+}
+
+func (s *Server) worker() {
+    for {
+        if s.stopped { return } // busy-polls, racy
+        doWork()
+    }
+}
+```
+
+**Example — after:**
+```go
+type Server struct {
+    done chan struct{}
+}
+
+func NewServer() *Server {
+    return &Server{done: make(chan struct{})}
+}
+
+func (s *Server) worker() {
+    for {
+        select {
+        case <-s.done:
+            return
+        case work := <-s.workCh:
+            process(work)
+        }
+    }
+}
+
+func (s *Server) Stop() { close(s.done) } // broadcasts to ALL workers
+```
+
 ### Anti-pattern
 
 ```go
@@ -491,6 +603,48 @@ func generate(ctx context.Context) <-chan int {
         }
     }()
     return out
+}
+```
+
+### When to Use
+
+**Triggers:**
+- You have a producer-consumer flow where the consumer's speed should limit the producer (backpressure)
+- Data flows through multiple transformation stages
+- You want to decouple stages that can run concurrently
+
+**Example — before:**
+```go
+func processAll(items []string) []Result {
+    var results []Result
+    for _, item := range items {
+        fetched := fetch(item)      // sequential: fetch then transform
+        results = append(results, transform(fetched))
+    }
+    return results
+}
+```
+
+**Example — after:**
+```go
+func processAll(ctx context.Context, items []string) []Result {
+    fetched := make(chan Fetched)
+    go func() {
+        defer close(fetched)
+        for _, item := range items {
+            select {
+            case fetched <- fetch(item): // backpressure: blocks if transform is slow
+            case <-ctx.Done():
+                return
+            }
+        }
+    }()
+
+    var results []Result
+    for f := range fetched {
+        results = append(results, transform(f))
+    }
+    return results
 }
 ```
 

@@ -110,6 +110,33 @@ build time.
 **Why:** Catches interface drift at compile time without creating an instance. The
 blank identifier discards the value — this is purely a static assertion.
 
+**When to Use**
+
+**Triggers:**
+- You've defined a type that MUST satisfy an interface (implements `io.Reader`, `http.Handler`, etc.)
+- You want a compile-time guarantee that catches drift when you add/remove methods
+- You're writing a package with multiple types implementing the same interface
+
+**Example — before:**
+```go
+type MyWriter struct{ buf bytes.Buffer }
+
+func (w *MyWriter) Write(p []byte) (int, error) { return w.buf.Write(p) }
+
+// Months later, someone renames Write to WriteBuf...
+// No compile error — only discovered at runtime when passed as io.Writer
+```
+
+**Example — after:**
+```go
+// Compile-time check: if MyWriter stops implementing io.Writer, this fails to build
+var _ io.Writer = (*MyWriter)(nil)
+
+type MyWriter struct{ buf bytes.Buffer }
+
+func (w *MyWriter) Write(p []byte) (int, error) { return w.buf.Write(p) }
+```
+
 **Anti-pattern:** Relying on tests to catch interface conformance; skipping the check
 and discovering the mismatch at runtime; using reflection.
 
@@ -312,6 +339,39 @@ are exhaustively listed together.
 **Why:** Type safety (can't accidentally pass an `os.Flag` where a `crypto.Hash` is
 expected). `iota` eliminates magic numbers. Grouping makes the full set visible.
 
+**When to Use**
+
+**Triggers:**
+- You have a set of related values that represent distinct states or options (status codes, modes, categories)
+- Raw integers would be meaningless to readers (`SetMode(3)` vs `SetMode(ModeAsync)`)
+- You want the type system to prevent passing a "color" where a "direction" is expected
+
+**Example — before:**
+```go
+func SetLogLevel(level int) { ... }
+
+// Caller:
+SetLogLevel(3) // what does 3 mean?!
+SetLogLevel(-1) // valid? who knows
+```
+
+**Example — after:**
+```go
+type LogLevel int
+
+const (
+    LevelDebug LogLevel = iota
+    LevelInfo
+    LevelWarn
+    LevelError
+)
+
+func SetLogLevel(level LogLevel) { ... }
+
+// Caller:
+SetLogLevel(LevelWarn) // self-documenting
+```
+
 **Anti-pattern:** Untyped numeric constants; separate `const` declarations for related
 values; using raw integers in function signatures.
 
@@ -381,6 +441,34 @@ accidental mixing with raw int64 values.
 **Why:** Semantic meaning through the type system. You can't accidentally pass
 nanoseconds where seconds are expected. Methods provide conversion and formatting.
 Constants like `time.Second` make intent clear.
+
+**When to Use**
+
+**Triggers:**
+- A primitive type (`int`, `string`, `float64`) has a specific **semantic meaning** in your domain
+- You want to attach methods (formatting, validation, arithmetic) to the value
+- You've seen bugs from accidentally mixing units (`int` could be seconds, milliseconds, or nanoseconds)
+
+**Example — before:**
+```go
+func SetTimeout(ms int) { ... }    // is this milliseconds? seconds?
+func SetRetries(n int) { ... }     // can't accidentally swap these... or CAN you?
+
+SetTimeout(5)   // 5 what?
+SetRetries(500) // oops, swapped arguments — compiles fine!
+```
+
+**Example — after:**
+```go
+type Timeout time.Duration
+type RetryCount int
+
+func SetTimeout(t Timeout) { ... }
+func SetRetries(n RetryCount) { ... }
+
+SetTimeout(Timeout(5 * time.Second))   // explicit units
+SetRetries(RetryCount(3))              // can't swap — different types
+```
 
 **Anti-pattern:** Using raw `int64` for durations; accepting `int` parameters for
 time intervals; mixing units (milliseconds in one place, seconds in another).

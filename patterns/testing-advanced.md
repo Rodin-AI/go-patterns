@@ -16,6 +16,55 @@ The canonical Go test style. Every Go stdlib test file uses this pattern.
 
 **Why:** Eliminates repetition, makes adding cases trivial, keeps the assertion logic in one place. Every test case gets the same verification path — no "special" cases hidden in different code paths.
 
+**When to Use**
+
+**Triggers:**
+- You're testing a function with many input/output combinations
+- You're copy-pasting test functions that differ by one or two values
+- Adding a new test case requires duplicating 10+ lines of setup/assertion code
+
+**Example — before:**
+```go
+func TestParseSize(t *testing.T) {
+    result1, err1 := ParseSize("10MB")
+    if err1 != nil || result1 != 10_000_000 { t.Error("10MB failed") }
+
+    result2, err2 := ParseSize("1GB")
+    if err2 != nil || result2 != 1_000_000_000 { t.Error("1GB failed") }
+
+    result3, err3 := ParseSize("invalid")
+    if err3 == nil { t.Error("invalid should fail") }
+    // ... 20 more copy-pasted blocks
+}
+```
+
+**Example — after:**
+```go
+func TestParseSize(t *testing.T) {
+    tests := []struct {
+        input   string
+        want    int64
+        wantErr bool
+    }{
+        {"10MB", 10_000_000, false},
+        {"1GB", 1_000_000_000, false},
+        {"invalid", 0, true},
+        {"0B", 0, false},
+    }
+    for _, tt := range tests {
+        t.Run(tt.input, func(t *testing.T) {
+            got, err := ParseSize(tt.input)
+            if (err != nil) != tt.wantErr {
+                t.Fatalf("ParseSize(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+            }
+            if got != tt.want {
+                t.Errorf("ParseSize(%q) = %d, want %d", tt.input, got, tt.want)
+            }
+        })
+    }
+}
+```
+
 **Anti-pattern:** Writing individual assertions for each case, or copy-pasting test functions that differ by one input.
 
 **Code example (stdlib):**
@@ -266,6 +315,48 @@ ServeFile(w, r, "testdata/file")
 3. Golden files serve as documentation of expected behavior.
 4. Reviewers can see exactly what output changed in diffs.
 
+**When to Use**
+
+**Triggers:**
+- Your function produces complex multi-line output (formatted code, HTML, JSON, error messages)
+- Expected output would be 20+ lines if inlined in the test — unreadable
+- Output changes intentionally sometimes and you need a quick way to approve the new version
+
+**Example — before:**
+```go
+func TestRenderTemplate(t *testing.T) {
+    got := renderHTML(data)
+    want := `<!DOCTYPE html>
+<html>
+<head><title>Hello</title></head>
+<body>
+<h1>Welcome, Alice</h1>
+<p>You have 3 messages.</p>
+</body>
+</html>` // 8 lines inline — and this is a SIMPLE template
+    if got != want { t.Errorf("mismatch") }
+}
+```
+
+**Example — after:**
+```go
+var update = flag.Bool("update", false, "update golden files")
+
+func TestRenderTemplate(t *testing.T) {
+    got := renderHTML(data)
+    golden := filepath.Join("testdata", t.Name()+".golden")
+    if *update {
+        os.WriteFile(golden, []byte(got), 0644)
+        return
+    }
+    want, _ := os.ReadFile(golden)
+    if got != string(want) {
+        t.Errorf("output mismatch; run with -update to accept new output")
+    }
+}
+// Golden file lives at testdata/TestRenderTemplate.golden
+```
+
 **Anti-pattern:** Comparing against inline expected strings that span 50+ lines, or manually constructing expected output.
 
 **Code example (stdlib):**
@@ -318,6 +409,38 @@ func TestRewrite(t *testing.T) {
 **What they do:** Use `httptest.NewRecorder()` to test HTTP handlers without starting a server. Captures status code, headers, and body.
 
 **Why:** Fast, no network, no port allocation, no goroutines. Perfect for unit testing individual handlers in isolation.
+
+**When to Use**
+
+**Triggers:**
+- You're testing HTTP handler logic (status codes, headers, response body) in isolation
+- You don't need real TCP connections, TLS, or routing
+- Your test should run in <1ms, not wait for port binding
+
+**Example — before:**
+```go
+func TestHealthHandler(t *testing.T) {
+    srv := httptest.NewServer(http.HandlerFunc(healthHandler))
+    defer srv.Close()
+    resp, _ := http.Get(srv.URL + "/health") // real TCP connection — slow
+    if resp.StatusCode != 200 { t.Fatal("not healthy") }
+}
+```
+
+**Example — after:**
+```go
+func TestHealthHandler(t *testing.T) {
+    req := httptest.NewRequest("GET", "/health", nil)
+    rec := httptest.NewRecorder()
+    healthHandler(rec, req) // direct call — no network
+    if rec.Code != 200 {
+        t.Fatalf("got status %d, want 200", rec.Code)
+    }
+    if rec.Body.String() != "ok" {
+        t.Errorf("body = %q, want %q", rec.Body.String(), "ok")
+    }
+}
+```
 
 **Anti-pattern:** Spinning up a full server to test handler logic that doesn't need networking.
 

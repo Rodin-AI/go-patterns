@@ -13,6 +13,39 @@ explicit initialization. Nil fields fall back to sensible defaults at method cal
 self-documenting about its defaults. Users can write `var c http.Client` and start
 making requests.
 
+**When to Use**
+
+**Triggers:**
+- You're designing a type where the "empty" or "default" state is meaningful and safe
+- Users should be able to write `var x MyType` and immediately call methods
+- Your struct's nil/zero fields can fall back to sensible defaults at call time
+
+**Example — before:**
+```go
+type Cache struct {
+    store map[string][]byte
+    ttl   time.Duration
+}
+
+// Panics on zero value — store is nil!
+func (c *Cache) Set(k string, v []byte) { c.store[k] = v }
+```
+
+**Example — after:**
+```go
+type Cache struct {
+    store map[string][]byte
+    ttl   time.Duration // zero means no expiry
+}
+
+func (c *Cache) Set(k string, v []byte) {
+    if c.store == nil {
+        c.store = make(map[string][]byte) // lazy init on first use
+    }
+    c.store[k] = v
+}
+```
+
 **Anti-pattern:** Requiring a constructor for basic use; panicking on zero-value use;
 requiring all fields be set before the type is functional.
 
@@ -116,6 +149,39 @@ value alone.
 clearly communicates what's required. The constructor can set internal invariants
 (buffer sizes, split functions) that users shouldn't need to know about.
 
+**When to Use**
+
+**Triggers:**
+- Your type has mandatory dependencies that can't be expressed as zero values (an `io.Reader`, a DB connection)
+- Internal invariants must be set up (buffer allocation, goroutine start)
+- The type isn't useful without initialization (unlike `sync.Mutex` or `bytes.Buffer`)
+
+**Example — before:**
+```go
+type Parser struct {
+    lexer    *Lexer
+    buf      []Token
+    maxDepth int
+}
+
+// User must know about all internal state:
+p := &Parser{lexer: NewLexer(input), buf: make([]Token, 0, 64), maxDepth: 100}
+```
+
+**Example — after:**
+```go
+func NewParser(input io.Reader) *Parser {
+    return &Parser{
+        lexer:    NewLexer(input),
+        buf:      make([]Token, 0, 64),
+        maxDepth: 100,
+    }
+}
+
+// User writes:
+p := NewParser(file)
+```
+
 **Anti-pattern:** Forcing users to manually set unexported fields; having a constructor
 that takes 10 optional parameters (use config struct instead); requiring New when
 zero value would suffice.
@@ -204,6 +270,35 @@ configuration knobs. Nil/zero values always mean "use the default".
 **Why:** Self-documenting via godoc; no need for a setter method per option; easy to
 construct partially; serializable; the zero value works. This is Go's primary
 configuration pattern (preferred over functional options in the stdlib).
+
+**When to Use**
+
+**Triggers:**
+- Your constructor has 4+ optional parameters that would make a function signature unwieldy
+- You want users to see all options in one place with godoc documentation
+- Zero/nil values should mean "use the default" — no required fields beyond what the constructor demands
+
+**Example — before:**
+```go
+// 7 parameters — impossible to remember the order
+func NewServer(addr string, handler http.Handler, readTimeout, writeTimeout time.Duration,
+    maxConns int, logger *log.Logger, tlsConfig *tls.Config) *Server { ... }
+```
+
+**Example — after:**
+```go
+type ServerConfig struct {
+    Addr         string        // ":8080" if empty
+    Handler      http.Handler  // http.DefaultServeMux if nil
+    ReadTimeout  time.Duration // zero means no timeout
+    WriteTimeout time.Duration // zero means no timeout
+    MaxConns     int           // 1000 if zero
+    Logger       *log.Logger   // log.Default() if nil
+    TLSConfig    *tls.Config   // plain HTTP if nil
+}
+
+func NewServer(cfg ServerConfig) *Server { ... }
+```
 
 **Anti-pattern:** Undocumented fields; requiring all fields set; using sentinel values
 other than zero/nil for defaults; providing setters when direct assignment works.

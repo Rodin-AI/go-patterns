@@ -18,6 +18,30 @@ deploymentCopy := deployment.DeepCopy()
 deploymentCopy.Spec.Replicas = ptr.To[int32](3)
 ```
 
+
+### When to Apply This Rule
+
+**Triggers:**
+- You're reading from any shared data structure (cache, registry, concurrent map)
+- Your function modifies a struct that was returned by a Lister, cache, or lookup
+- You see code like `obj.Field = newValue` where `obj` came from a shared source
+
+**Example — detecting the smell:**
+```go
+// This line is the red flag: modifying something obtained from a shared cache
+deployment, _ := deploymentLister.Get(name)
+deployment.Spec.Replicas = ptr.To[int32](5) // SMELL: mutating cached object
+client.Update(ctx, deployment)
+```
+
+**Example — fixed:**
+```go
+deployment, _ := deploymentLister.Get(name)
+copy := deployment.DeepCopy()       // isolate your mutation
+copy.Spec.Replicas = ptr.To[int32](5)
+client.Update(ctx, copy)
+```
+
 **Evidence:** The `runtime.Object` interface *mandates* `DeepCopyObject()`. Every API type has generated deep copy methods. The entire architecture assumes immutable reads.
 
 ---
@@ -49,6 +73,29 @@ func (q *Typed[T]) Get() (item T, shutdown bool) {
 **Why:** Events can be missed (watch disconnects), delivered out of order, or duplicated. If your controller says "a pod was deleted, so decrement counter" rather than "count current pods and compare to desired", you'll drift.
 
 **The pattern K8s enforces:** Level-triggered reconciliation. The `syncHandler` reads *current state from the cache*, computes *desired state from the spec*, and makes the world match:
+
+
+### When to Apply This Rule
+
+**Triggers:**
+- Your handler says "X happened, so do Y" instead of "the world should look like Z, make it so"
+- You're incrementing/decrementing counters based on events instead of counting actual state
+- A missed event (network blip, restart) would cause permanent drift
+
+**Example — detecting the smell:**
+```go
+func onPodDeleted(pod Pod) {
+    deployment.Status.Replicas-- // edge-triggered: if we miss a delete, count is wrong forever
+}
+```
+
+**Example — fixed:**
+```go
+func reconcile(deployment Deployment) {
+    actualPods := listPodsForDeployment(deployment)
+    deployment.Status.Replicas = int32(len(actualPods)) // level-triggered: always correct
+}
+```
 
 ```go
 // The sync function always reads current state, never relies on "what happened"

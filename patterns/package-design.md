@@ -117,6 +117,32 @@ Packages under `internal/` can only be imported by code rooted at the parent of 
 - `net/http/internal/ascii` → importable by `net/http` and children
 - NOT importable by `net/url` or any other package
 
+### When to Use
+
+**Triggers:**
+- You have helper code shared between sub-packages but NOT part of your public API
+- You're tempted to export a function "just for testing" — put it in `internal/` instead
+- Your package has grown and you want to split it without committing to new public APIs
+
+**Example — before:**
+```go
+// pkg/mylib/helpers.go — exported just so pkg/mylib/sub can use it
+package mylib
+
+func ParseInternalFormat(s string) Thing { ... } // now anyone can depend on this!
+```
+
+**Example — after:**
+```go
+// pkg/mylib/internal/parse/parse.go
+package parse
+
+func InternalFormat(s string) Thing { ... } // only importable by pkg/mylib and children
+
+// pkg/mylib/sub/handler.go
+import "pkg/mylib/internal/parse" // ✓ allowed
+```
+
 ### Anti-pattern
 
 ```go
@@ -191,6 +217,34 @@ The stdlib uses `init()` for:
 2. No errors possible (can't return error from init)
 3. Keep them short
 4. Prefer explicit initialization in `main()` when possible
+
+### When to Use
+
+**Triggers:**
+- You're writing a driver or plugin that needs to register itself with a central registry on import
+- The registration is side-effect-only (no return value, can't fail)
+- You want `import _ "mydb/driver"` to make the driver available without explicit setup
+
+**Example — before:**
+```go
+// main.go — user must manually register every driver
+func main() {
+    postgres.Register()   // easy to forget
+    mysql.Register()      // order matters?
+    sqlite.Register()
+}
+```
+
+**Example — after:**
+```go
+// postgres/driver.go
+func init() {
+    sql.Register("postgres", &Driver{}) // auto-registers on import
+}
+
+// main.go — import for side-effect
+import _ "github.com/lib/pq" // driver registers itself
+```
 
 ### Anti-pattern
 
@@ -403,6 +457,34 @@ type contextKey struct {
 - **Unexported key type** prevents other packages from accessing your values
 - **Type-safe accessors** avoid repeated type assertions
 - **Pointer-based keys** guarantee uniqueness
+
+### When to Use
+
+**Triggers:**
+- You need to pass request-scoped metadata through a call chain (user ID, trace ID, auth token)
+- The data crosses package boundaries and isn't appropriate as a function parameter
+- You want type safety — only your package should read/write its context values
+
+**Example — before:**
+```go
+// String keys — any package can collide or access your values
+ctx = context.WithValue(ctx, "userID", 42)
+uid := ctx.Value("userID").(int) // panics if wrong type or missing
+```
+
+**Example — after:**
+```go
+type ctxKey struct{}
+
+func WithUserID(ctx context.Context, id int) context.Context {
+    return context.WithValue(ctx, ctxKey{}, id)
+}
+
+func UserID(ctx context.Context) (int, bool) {
+    id, ok := ctx.Value(ctxKey{}).(int)
+    return id, ok
+}
+```
 
 ### Anti-pattern
 
