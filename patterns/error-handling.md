@@ -74,6 +74,48 @@ func fetchUser(id int) (*User, error) {
 }
 ```
 
+
+### When NOT to Use
+
+**Don't use this when:**
+- The error condition is internal and no caller should branch on it — use `fmt.Errorf` instead
+- You have too many sentinels (>5-6 per package) — consider a custom error type with a code field
+- The error carries varying context (file path, user ID) — sentinels are for fixed conditions
+
+**Over-application example:**
+```go
+// A sentinel for every possible failure — explosion of package-level vars
+var (
+    ErrUserNotFound     = errors.New("users: not found")
+    ErrUserInactive     = errors.New("users: inactive")
+    ErrUserSuspended    = errors.New("users: suspended")
+    ErrUserRateLimited  = errors.New("users: rate limited")
+    ErrUserInvalidEmail = errors.New("users: invalid email")
+    ErrUserInvalidName  = errors.New("users: invalid name")
+    ErrUserInvalidAge   = errors.New("users: invalid age")
+    // 20 more...
+)
+```
+
+**Better alternative:**
+```go
+// Use a typed error with a code when you have many distinct conditions
+type UserError struct {
+    Code    string // "not_found", "inactive", "suspended"
+    Field   string // which field failed validation
+    Message string
+}
+
+func (e *UserError) Error() string { return "users: " + e.Message }
+
+// Callers use errors.As to inspect
+var uerr *UserError
+if errors.As(err, &uerr) && uerr.Code == "not_found" { ... }
+```
+
+**Why:** Sentinels are for a small number of well-known states that callers frequently branch on. If you're creating dozens, you've outgrown the pattern — a structured error type with an enum/code field scales better and avoids polluting the package namespace.
+
+
 ### Anti-pattern
 
 ```go
@@ -216,6 +258,43 @@ func loadConfig(path string) (*Config, error) {
 
 - **%w**: When the wrapped error is part of your API contract. Callers can depend on it.
 - **%v**: When you want to include the error text but NOT let callers depend on the underlying type. Use for implementation details.
+
+
+### When NOT to Use
+
+**Don't use this when:**
+- You're wrapping at every single layer — the error message becomes `"a: b: c: d: e: permission denied"`
+- The added context is obvious from the function name (the caller already knows what function they called)
+- You're wrapping errors from a dependency you don't want in your API contract (use `%v` instead)
+
+**Over-application example:**
+```go
+func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
+    user, err := s.getUser(r)
+    if err != nil {
+        // "handleRequest: getUser: fetchFromDB: queryRow: scan: sql: no rows"
+        // The handler name adds nothing — the caller IS the handler
+        http.Error(w, fmt.Errorf("handleRequest: %w", err).Error(), 500)
+        return
+    }
+}
+```
+
+**Better alternative:**
+```go
+func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
+    user, err := s.getUser(r)
+    if err != nil {
+        // Log the full chain internally, return a clean message to the client
+        slog.Error("fetching user", "err", err, "path", r.URL.Path)
+        http.Error(w, "internal error", 500)
+        return
+    }
+}
+```
+
+**Why:** Wrapping should add *meaningful* context that isn't already obvious. At HTTP handler boundaries, you typically log the error (with full chain) and return a generic response. Wrapping at every layer creates unreadable error strings and leaks internals.
+
 
 ### Anti-pattern
 
@@ -418,6 +497,46 @@ func cleanup(db *sql.DB, cache *redis.Client, file *os.File) error {
     ) // nil if all nil; contains all failures otherwise
 }
 ```
+
+
+### When NOT to Use
+
+**Don't use this when:**
+- Errors are causally related (error B was caused by error A) — use wrapping (`%w`) instead
+- You're collecting errors across retries of the *same* operation — return the last error or wrap them causally
+- The caller needs to distinguish which resource failed — Join loses that information
+
+**Over-application example:**
+```go
+func fetchWithRetry(url string, attempts int) error {
+    var errs []error
+    for i := 0; i < attempts; i++ {
+        err := fetch(url)
+        if err == nil {
+            return nil
+        }
+        errs = append(errs, err) // collecting retry errors — misleading
+    }
+    return errors.Join(errs...) // caller sees 3 errors but they're the SAME operation
+}
+```
+
+**Better alternative:**
+```go
+func fetchWithRetry(url string, attempts int) error {
+    var lastErr error
+    for i := 0; i < attempts; i++ {
+        lastErr = fetch(url)
+        if lastErr == nil {
+            return nil
+        }
+    }
+    return fmt.Errorf("fetch %s: %d attempts failed, last: %w", url, attempts, lastErr)
+}
+```
+
+**Why:** `errors.Join` is for *independent* failures that all matter equally. For retries, the caller cares about the final failure and the retry count, not a list of (often identical) errors. For causal chains, wrapping preserves the relationship between cause and effect.
+
 
 ### Anti-pattern
 

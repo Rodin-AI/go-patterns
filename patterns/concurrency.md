@@ -71,6 +71,52 @@ func (s *Stats) RecordHit() {
 }
 ```
 
+
+### When NOT to Use
+
+**Don't use this when:**
+- Goroutines need to coordinate or communicate (not just protect state) — use channels
+- The critical section involves blocking I/O (holding a mutex during network calls starves other goroutines)
+- You can restructure to have a single goroutine own the state (no sharing = no lock needed)
+
+**Over-application example:**
+```go
+// Using a mutex to coordinate work between goroutines
+type TaskQueue struct {
+    mu    sync.Mutex
+    tasks []Task
+    ready bool
+}
+
+func (q *TaskQueue) WaitForReady() {
+    for {
+        q.mu.Lock()
+        if q.ready {
+            q.mu.Unlock()
+            return
+        }
+        q.mu.Unlock()
+        time.Sleep(10 * time.Millisecond) // spin-waiting with a lock — terrible
+    }
+}
+```
+
+**Better alternative:**
+```go
+// Use a channel for coordination/signaling
+type TaskQueue struct {
+    tasks chan Task
+    ready chan struct{}
+}
+
+func (q *TaskQueue) WaitForReady() {
+    <-q.ready // blocks efficiently, no spinning
+}
+```
+
+**Why:** Mutexes protect data; channels coordinate goroutines. If you're polling a mutex-protected flag, you've reinvented a bad channel. The Go proverb applies: "Don't communicate by sharing memory; share memory by communicating."
+
+
 ### Idiomatic Usage
 
 ```go
@@ -167,6 +213,63 @@ func GetDB() *sql.DB {
     return db
 }
 ```
+
+
+### When NOT to Use
+
+**Don't use this when:**
+- Initialization can fail and you need to retry — Once runs the func at most once, even on failure
+- You need to reset/reinitialize later (Once has no Reset method)
+- The initialization is cheap — just do it in `init()` or at declaration time
+
+**Over-application example:**
+```go
+var (
+    conn *grpc.ClientConn
+    once sync.Once
+)
+
+func GetConn() (*grpc.ClientConn, error) {
+    var err error
+    once.Do(func() {
+        conn, err = grpc.Dial("server:443")
+    })
+    if err != nil {
+        return nil, err // PROBLEM: next call to GetConn returns nil conn, nil err
+        // because once.Do won't run again
+    }
+    return conn, nil
+}
+```
+
+**Better alternative:**
+```go
+// Use sync.OnceValues (Go 1.21+) which caches both value and error,
+// or handle retry logic explicitly
+var getConn = sync.OnceValues(func() (*grpc.ClientConn, error) {
+    return grpc.Dial("server:443")
+})
+
+// Or for retry scenarios, use a mutex with a nil check
+var (
+    mu   sync.Mutex
+    conn *grpc.ClientConn
+)
+
+func GetConn() (*grpc.ClientConn, error) {
+    mu.Lock()
+    defer mu.Unlock()
+    if conn != nil {
+        return conn, nil
+    }
+    var err error
+    conn, err = grpc.Dial("server:443") // retries on next call if this fails
+    return conn, err
+}
+```
+
+**Why:** `sync.Once` guarantees exactly-once execution regardless of success or failure. If the initialization can fail transiently (network timeout, service unavailable), Once will permanently cache the failure. Use `sync.OnceValues` for caching results, or a mutex with a nil-check pattern when retry is needed.
+
 
 ### Idiomatic Usage
 
@@ -409,6 +512,60 @@ func (s *Server) worker() {
 func (s *Server) Stop() { close(s.done) } // broadcasts to ALL workers
 ```
 
+
+### When NOT to Use
+
+**Don't use this when:**
+- You need to send actual data between goroutines — use a typed channel
+- You only have one goroutine to signal — a simple `return` or function call suffices
+- You're using it as a poor substitute for `context.Context` (which already provides Done())
+
+**Over-application example:**
+```go
+// Rolling your own done channel when context already provides this
+type Worker struct {
+    done   chan struct{}
+    ctx    context.Context
+    cancel context.CancelFunc
+}
+
+func (w *Worker) Start() {
+    go func() {
+        select {
+        case <-w.done:   // redundant — ctx.Done() does the same thing
+            return
+        case <-w.ctx.Done():
+            return
+        }
+    }()
+}
+```
+
+**Better alternative:**
+```go
+// Just use the context — it already IS a done signal
+type Worker struct {
+    ctx    context.Context
+    cancel context.CancelFunc
+}
+
+func (w *Worker) Start() {
+    go func() {
+        select {
+        case <-w.ctx.Done():
+            return
+        case work := <-w.workCh:
+            process(work)
+        }
+    }()
+}
+
+func (w *Worker) Stop() { w.cancel() }
+```
+
+**Why:** If you already have a `context.Context`, its `Done()` channel is your cancellation signal. Adding a separate `chan struct{}` duplicates functionality and creates two shutdown paths that must be kept in sync. Use raw done channels only when you don't have a context (e.g., standalone libraries that predate context).
+
+
 ### Anti-pattern
 
 ```go
@@ -647,6 +804,49 @@ func processAll(ctx context.Context, items []string) []Result {
     return results
 }
 ```
+
+
+### When NOT to Use
+
+**Don't use this when:**
+- The "pipeline" has only one stage — you're just adding goroutine overhead to sequential code
+- All items are already in memory and processing is CPU-bound with no I/O — `for` loop is simpler and faster
+- You don't actually need backpressure (data fits in memory, producer is finite)
+
+**Over-application example:**
+```go
+// Channel pipeline for a simple in-memory transformation
+func doubleAll(nums []int) []int {
+    ch := make(chan int)
+    go func() {
+        defer close(ch)
+        for _, n := range nums {
+            ch <- n // channel overhead for no benefit
+        }
+    }()
+
+    var result []int
+    for n := range ch {
+        result = append(result, n*2)
+    }
+    return result
+}
+```
+
+**Better alternative:**
+```go
+// Just use a loop — no concurrency needed
+func doubleAll(nums []int) []int {
+    result := make([]int, len(nums))
+    for i, n := range nums {
+        result[i] = n * 2
+    }
+    return result
+}
+```
+
+**Why:** Channel pipelines shine when stages involve I/O (network, disk) and can overlap waiting. For pure computation on in-memory data, the channel send/receive overhead (~50-100ns per item) adds up and the goroutine scheduling has no useful work to overlap with. A plain loop is faster, simpler, and easier to debug.
+
 
 ### Anti-pattern
 

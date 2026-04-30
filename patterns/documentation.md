@@ -197,6 +197,37 @@ func ExampleProcess() {
 // ← go test verifies this compiles and produces the expected output
 ```
 
+**When NOT to Use**
+
+**Don't write Example tests when:**
+- The function signature is self-explanatory (`func Max(a, b int) int` doesn't need an example)
+- The example would just restate the doc comment with no additional insight
+- You're testing internal/unexported functions (examples must use the public API)
+- The output is non-deterministic (timestamps, random values, goroutine ordering)
+
+**Over-application example:**
+```go
+// Pointless — the signature tells you everything
+func ExampleAbs() {
+    fmt.Println(math.Abs(-5))
+    // Output:
+    // 5
+}
+```
+
+**Better alternative:**
+```go
+// Skip the example for trivial functions. Write examples for non-obvious behavior:
+func ExampleAbs_nan() {
+    fmt.Println(math.Abs(math.NaN()))
+    // Output:
+    // NaN
+}
+// ← This teaches something surprising that the signature doesn't convey
+```
+
+**Why:** Examples exist to teach usage patterns that aren't obvious from the type signature and doc comment. Trivial examples add maintenance burden without teaching anything.
+
 **Anti-pattern:** Examples that don't compile; examples without Output comments
 (not verified); examples in README that drift from reality.
 
@@ -318,6 +349,36 @@ func ParseDuration(s string) (time.Duration, error) {
     return time.ParseDuration(s) // delegate to the replacement
 }
 ```
+
+**When NOT to Use**
+
+**Don't deprecate when:**
+- The function still works fine and there's no better replacement yet
+- You're deprecating to "clean up" the API without a migration path (users will just ignore it)
+- The replacement has a different behavior or isn't a drop-in substitute (document the difference instead)
+- You're on v0.x and can just remove it (pre-1.0 allows breaking changes)
+
+**Over-application example:**
+```go
+// Deprecated: Use NewClientV2 instead.
+func NewClient(addr string) *Client { ... }
+
+// But NewClientV2 has a completely different API:
+func NewClientV2(cfg Config) (*ClientV2, error) { ... }
+// Users can't just find-and-replace — this isn't a deprecation, it's a migration
+```
+
+**Better alternative:**
+```go
+// NewClient creates a client with default configuration.
+// For advanced configuration (TLS, timeouts, connection pooling),
+// use [NewClientWithConfig] instead.
+func NewClient(addr string) *Client {
+    return NewClientWithConfig(Config{Addr: addr})
+}
+```
+
+**Why:** Deprecation means "there's a better way to do the same thing." If the replacement requires a fundamentally different approach, provide a migration guide — don't just slap `Deprecated:` on it and leave users stranded.
 
 **Anti-pattern:** Removing deprecated APIs (breaks semver); deprecating without
 suggesting an alternative; using non-standard deprecation markers.
