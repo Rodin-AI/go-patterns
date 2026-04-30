@@ -34,6 +34,9 @@ with a `Read` method satisfies `Reader` — no explicit declaration
 needed. The Go stdlib has 15 compositions of just 4 primitives in
 `io/io.go`.
 
+**When to use:** Defining extension points, function parameters,
+and dependency injection boundaries.
+
 **When NOT to use:** When the interface genuinely requires multiple
 methods that always go together (e.g., `http.Handler` is one method
 but `sort.Interface` is three because Len/Less/Swap are inseparable).
@@ -54,6 +57,9 @@ func NewReader(rd io.Reader) *Reader
 **Why:** Accepting interfaces means any implementation works. Returning
 structs means callers get full access to methods and fields without
 type assertions.
+
+**When to use:** Public API functions that take collaborators or
+return constructed objects.
 
 **When NOT to use:** When you need to return different types based on
 input (return an interface). When the concrete type is unexported
@@ -80,6 +86,9 @@ var ErrLength = errors.New("encoding/hex: odd length hex string")
 specific cases. The error message includes the package name for
 context.
 
+**When to use:** Errors that represent a known, documented condition
+that callers may want to handle differently.
+
 **When NOT to use:** For errors that callers never need to distinguish.
 For errors that carry dynamic context (use error types instead).
 
@@ -95,6 +104,9 @@ return fmt.Errorf("cannot parse %q as JSON number: %w", val, strconv.ErrSyntax)
 
 **Why:** Wrapping creates a chain. Callers can `errors.Is()` to find
 the root cause while seeing the full context path.
+
+**When to use:** Every time you propagate an error up the call stack
+and the caller might need to identify the root cause.
 
 **When NOT to use:** When the original error's identity should be
 hidden (use `%v` instead of `%w` to break the chain intentionally).
@@ -137,6 +149,9 @@ func TestSetenv(t *testing.T) {
 is one struct literal. The pattern is universal in Go's own tests
 (1,811 test files use it).
 
+**When to use:** Any function with 3+ meaningful input variations.
+The default testing pattern in Go.
+
 **When NOT to use:** Single-case tests. Tests where setup varies
 significantly between cases (use separate test functions).
 
@@ -147,6 +162,9 @@ ignores it.
 
 **Why:** Convention enforced by the toolchain — `testdata/` is never
 compiled. Golden files, sample inputs, and expected outputs live here.
+
+**When to use:** Golden files, sample inputs, certificates, expected
+outputs — any file your tests read but never modify.
 
 **When NOT to use:** Generated test data (create it in TestMain or
 setup).
@@ -173,6 +191,8 @@ src/
 **Why:** The import path IS the directory path. `import "fmt"` loads
 `src/fmt/`. No indirection, no wrapper directories.
 
+**When to use:** Always. Every Go project. Import path = directory.
+
 **When NOT to use:** Never. There is no legitimate reason for a `pkg/`
 directory in Go. (The `pkg/` convention from early community projects
 was a mistake that the Go team never endorsed.)
@@ -191,7 +211,10 @@ import "internal/singleflight"
 build error if they try to import your internals. This is stronger than
 unexported identifiers (which still allow same-package access).
 
-**When NOT to use:** Code that's stable enough for public API (promote
+**When to use:** Utility code shared across packages that is NOT
+ready for (or appropriate as) public API.
+
+**When NOT to use:** Code that is stable enough for public API (promote
 it). Code only used by one package (keep it unexported within that
 package).
 
@@ -215,6 +238,9 @@ func (c *Client) do(ctx context.Context, req *Request) (*Response, error)
 values. First-parameter position is a universal convention — every Go
 developer knows to look for it there.
 
+**When to use:** Any function that does I/O, blocks, or might be
+cancelled by the caller.
+
 **When NOT to use:** Pure computation (no I/O, no blocking). Package-
 level init functions. Short-lived operations that can't be cancelled.
 
@@ -226,6 +252,9 @@ spawn goroutines.
 **Why:** The Go stdlib almost never starts goroutines in library code
 (exception: `net/http` server). Libraries that spawn goroutines create
 lifecycle management problems — who stops them? who waits for them?
+
+**When to use:** Pure libraries that transform data or compute
+results. Let callers decide on concurrency.
 
 **When NOT to use:** Servers (http.Server manages connections).
 Background work that the caller explicitly requested (provide a
@@ -257,6 +286,9 @@ package fmt
 create sections in pkg.go.dev. `doc.go` is conventional — reviewers
 know where to find the overview.
 
+**When to use:** Any package with a non-trivial API surface that
+needs an overview explaining its purpose and structure.
+
 **When NOT to use:** Small packages where the package comment fits
 naturally in the main file.
 
@@ -286,6 +318,9 @@ in docs. They can't go stale because the build fails if they break.
 
 **Why:** Package names prefix every exported identifier. `bytes.Buffer`
 reads well. `utilities.Buffer` doesn't.
+
+**When to use:** Every package you create. Pick the shortest noun
+that accurately describes the package's single responsibility.
 
 **When NOT to use:** Never use plurals (`utils`, `helpers`, `models`).
 Never use generic names that could apply to anything.
