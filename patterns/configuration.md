@@ -903,7 +903,7 @@ of immutable-after-use configs.
 
 ### Source:
 
-[crypto/tls/common.go#L925](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/tls/common.go#L925) (tls.Config.Clone)
+[crypto/tls/common.go#L996](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/tls/common.go#L996) (tls.Config.Clone)
 
 ```go
 // Clone returns a shallow clone of c or nil if c is nil. It is safe to clone
