@@ -247,14 +247,14 @@ type Builder struct {
     buf  []byte
 }
 
-// strings/builder.go:92-96
+// strings/builder.go:112-116
 func (b *Builder) WriteString(s string) (int, error) {
     b.copyCheck()
     b.buf = append(b.buf, s...)
     return len(s), nil
 }
 
-// strings/builder.go:48-50
+// strings/builder.go:46-48
 func (b *Builder) String() string {
     return unsafe.String(unsafe.SliceData(b.buf), len(b.buf))
 }

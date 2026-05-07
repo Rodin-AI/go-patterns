@@ -86,7 +86,7 @@ too many sections (fragmenting simple docs).
 
 **Pattern name:** `// TypeName verb...` or `// FuncName verb...`
 
-**Source citation:** [net/http/server.go#L64](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L64) (Handler), [bufio/scan.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/scan.go#L14) (Scanner)
+**Source citation:** [net/http/server.go#L65](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L65) (Handler), [bufio/scan.go#L14](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/bufio/scan.go#L14) (Scanner)
 
 **What it does:** Every exported identifier's doc comment starts with the identifier
 name, followed by a verb phrase describing what it does or represents.
@@ -102,7 +102,7 @@ the comment entirely.
 **Code examples from source:**
 
 ```go
-// net/http/server.go:64
+// net/http/server.go:65
 // A Handler responds to an HTTP request.
 
 // bufio/scan.go:14-17
@@ -280,7 +280,7 @@ func ExampleHandle() {
 
 **Pattern name:** Indented Code Blocks in Comments
 
-**Source citation:** [os/file.go#L17](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L17), [time/time.go#L928](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/time.go#L928)
+**Source citation:** [os/file.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file.go#L16), [time/time.go#L928](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/time/time.go#L928)
 
 **What it does:** Doc comments include indented code snippets (4 spaces) that render
 as preformatted code blocks in godoc.
@@ -294,7 +294,7 @@ for inline (use Example functions instead); examples that reference unexported s
 **Code examples from source:**
 
 ```go
-// os/file.go:17-21
+// os/file.go:16-21
 // Here is a simple example, opening a file and reading some of it.
 //
 //     file, err := os.Open("file.go") // For read access.

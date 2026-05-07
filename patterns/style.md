@@ -36,7 +36,7 @@ const shutdownPollIntervalMax = 500 * time.Millisecond
 
 **Pattern name:** Acronym Capitalization
 
-**Source citation:** [net/http/request.go#L130](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/request.go#L130) (`URL`), [net/http/server.go#L3041](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L3041) (`TLSConfig`), [encoding/json/stream.go#L280](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/stream.go#L280) (`JSON`)
+**Source citation:** [net/http/request.go#L130](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/request.go#L130) (`URL`), [net/http/server.go#L3040](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L3040) (`TLSConfig`), [encoding/json/stream.go#L280](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/encoding/json/stream.go#L280) (`JSON`)
 
 **What it does:** Acronyms and initialisms (URL, HTTP, ID, JSON, XML, HTML, TLS, TCP)
 are always fully capitalized when exported, and fully lowercased when unexported.
@@ -55,7 +55,7 @@ URL *url.URL
 // net/http/request.go:822
 func ParseHTTPVersion(vers string) (major, minor int, ok bool)
 
-// net/http/server.go:3041
+// net/http/server.go:3040
 TLSConfig *tls.Config
 
 // encoding/json/stream.go:280
@@ -613,7 +613,7 @@ checking in code that `gofmt` would modify.
 
 **Pattern name:** Grouped Imports (stdlib / external / internal)
 
-**Source citation:** [net/http/server.go#L8](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L8)
+**Source citation:** [net/http/server.go#L9](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/net/http/server.go#L9)
 
 **What it does:** Imports are organized in groups separated by blank lines:
 1. Standard library
@@ -628,7 +628,7 @@ external). Reduces merge conflicts.
 **Code example from source:**
 
 ```go
-// net/http/server.go:8-36
+// net/http/server.go:9-36
 import (
     "bufio"
     "bytes"

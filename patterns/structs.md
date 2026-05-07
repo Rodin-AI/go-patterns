@@ -128,7 +128,7 @@ type Buffer struct {
 
 **Pattern name:** Indirection via Unexported Impl
 
-**Source citation:** [os/types.go#L16](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/types.go#L16), [os/file_unix.go#L59](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file_unix.go#L59)
+**Source citation:** [os/types.go#L15](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/types.go#L15), [os/file_unix.go#L59](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/os/file_unix.go#L59)
 
 **What it does:** The exported type (`File`) embeds a pointer to an unexported type
 (`*file`) that holds the real implementation state. Users interact only with the
@@ -145,7 +145,7 @@ public API.
 **Code example from source:**
 
 ```go
-// os/types.go:16-20
+// os/types.go:15-20
 // File represents an open file descriptor.
 //
 // The methods of File are safe for concurrent use.
@@ -487,7 +487,7 @@ type Client struct {
 
 **Pattern name:** copyCheck (Runtime Copy Detection)
 
-**Source citation:** [strings/builder.go#L25](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/strings/builder.go#L25)
+**Source citation:** [strings/builder.go#L32](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/strings/builder.go#L32)
 
 **What it does:** On first mutation, the Builder records its own address. Subsequent
 mutations compare the current receiver address against the recorded one. If they
@@ -503,7 +503,7 @@ buffer), a runtime check is the pragmatic solution.
 **Code example from source:**
 
 ```go
-// strings/builder.go:25-40
+// strings/builder.go:32-40
 func (b *Builder) copyCheck() {
     if b.addr == nil {
         b.addr = (*Builder)(abi.NoEscape(unsafe.Pointer(b)))

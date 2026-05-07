@@ -763,10 +763,10 @@ default behavior."
 
 ### Source:
 
-[crypto/tls/common.go#L572](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/tls/common.go#L572)
+[crypto/tls/common.go#L575](https://github.com/golang/go/blob/17bd5ab8c650155dd2bd09f7005726552639eea0/src/crypto/tls/common.go#L575)
 
 ```go
-// src/crypto/tls/common.go:572
+// src/crypto/tls/common.go:575
 // Time returns the current time as the number of seconds since the epoch.
 // If Time is nil, TLS uses time.Now.
 Time func() time.Time
