@@ -18,9 +18,17 @@ These are derived from what mature Go codebases *actually do*, not opinions or b
 
 ## How to use
 
-1. **Before writing code:** check if a relevant pattern exists
-2. **During review:** verify code follows documented patterns
-3. **If code deviates:** either fix it or document why the deviation is justified
+### Writing code
+
+> Read the relevant pattern files from this repo before writing code. Your implementation must follow the documented patterns — if you deviate, justify why in a comment. Check `smells/` to make sure you're not introducing a known anti-pattern.
+
+### Reviewing code
+
+> Read the relevant pattern files from this repo. For each function or module in the diff, verify it follows the documented pattern. If the code deviates, flag it with a reference to the specific pattern and section. A deviation without justification is a finding.
+
+### Evaluating a pattern
+
+> Read the pattern file. Compare against how the following projects handle the same problem: [list projects]. Does the pattern hold? Are there cases where it breaks down? Update the pattern with what you find.
 
 ## Patterns vs Conventions
 
