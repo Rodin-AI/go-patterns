@@ -1,15 +1,31 @@
 # Go Patterns
 
-Idiomatic Go patterns extracted from the [Go standard library](https://github.com/golang/go) source code with verified file:line citations.
+**Prescriptive.** Follow these when writing Go code.
+
+A pattern is a reusable solution to a recurring problem. Each one has:
+- **When to use** — the problem it solves
+- **When NOT to use** — where it causes harm
+- **Why** — the reasoning, not just the rule
+- **Source citations** — verified file:line from real codebases
+
+These are derived from what mature Go codebases *actually do*, not opinions or blog posts.
 
 ## Structure
 
-- `patterns/` — Go stdlib patterns (interfaces, errors, concurrency, structs, testing, docs, style, API conventions, packages)
-- `smells/` — Anti-patterns and common Go mistakes
-- `changelog/` — Daily digest of merged Go PRs
+- `patterns/` — what to do (interfaces, errors, concurrency, testing, packages, etc.)
+- `smells/` — what NOT to do (anti-patterns, common mistakes)
+- `sources/` — reference material from specific projects (golang/go, Prometheus). Study for ideas, don't copy blindly.
 
-## Philosophy
+## How to use
 
-These rules are derived from what the Go standard library actually does, not opinions or blog posts. Every pattern cites specific files and line numbers.
+1. **Before writing code:** check if a relevant pattern exists
+2. **During review:** verify code follows documented patterns
+3. **If code deviates:** either fix it or document why the deviation is justified
 
-When unsure how to do something in Go, look at how the standard library does it.
+## Patterns vs Conventions
+
+**Pattern** = prescriptive. "When you face X, do Y." Language-scoped. Follow these.
+
+**Convention** = descriptive. "Project Z does it this way." Context-specific. Study for ideas — applying another project's conventions to yours without understanding their constraints causes harm.
+
+The `sources/` directory is convention material absorbed from thin repos. The `patterns/` directory is what you actually follow.
