@@ -644,4 +644,98 @@ import (
 )
 ```
 
+## 14. Switch vs If/Else: Choosing the Right Control Flow
+
+**Pattern name:** Switch for Exhaustive Dispatch, If/Else for Selective Handling
+
+**What it does:** Use `switch` when you need to distinguish *every* case — each branch
+does something different. Use `if/else` when you care about a few special values and
+everything else gets uniform treatment.
+
+**Why:** A `switch` communicates "I am dispatching on all the variants." An `if/else`
+communicates "I'm checking for a couple special conditions; the rest is the same."
+Choosing the wrong construct creates friction with linters (`exhaustive`), obscures
+intent, and invites duplicate branches.
+
+**When to Use switch**
+
+**Triggers:**
+- Every case produces a meaningfully different outcome
+- You want the compiler/linter to enforce that new enum values are handled
+- The `exhaustive` linter adds value because a missed case would be a bug
+
+**Example — good switch:**
+```go
+// Every ErrorCode maps to a different sentinel error — exhaustive dispatch is correct.
+func clientErrorCause(code ErrorCode) error {
+    switch code {
+    case CodeAuthFailed:
+        return errSourceAuthFailed
+    case CodeNotFound:
+        return errSourceNotFound
+    case CodeRequestRejected:
+        return errSourceRequestRejected
+    case CodeRateLimited:
+        return errSourceRateLimited
+    case CodeCanceled:
+        return context.Canceled
+    case CodeInvalidRequest:
+        return errSourceInvalidRequest
+    default:
+        return errSourceRequestRejected
+    }
+}
+```
+
+**When to Use if/else**
+
+**Triggers:**
+- You only distinguish 2–3 special values; everything else is handled identically
+- A `switch` would require duplicate branches or a `default` that repeats another case
+- The `exhaustive` linter would force you to enumerate cases you don't need to distinguish
+- Adding a new enum value should *not* require touching this code
+
+**Example — bad switch (creates problems):**
+```go
+// Only two codes produce different outcomes — the rest are identical.
+// A switch forces either duplicate branches or an exhaustive nolint.
+switch dtErr.Code {
+case CodeNotFound:
+    return notFoundResult(id)
+case CodeCanceled:
+    return canceledResult(id)
+case CodeUnavailable, CodeRateLimited, CodeRequestRejected,
+    CodeAuthFailed, CodeInvalidRequest:
+    return failedResult(id)  // identical to what default would do
+}
+```
+
+**Example — good if/else:**
+```go
+// Two special cases, everything else is "failed" — if/else expresses this directly.
+if dtErr.Code == CodeNotFound {
+    return notFoundResult(id)
+}
+if dtErr.Code == CodeCanceled {
+    return canceledResult(id)
+}
+return failedResult(id)
+```
+
+**The Decision Rule**
+
+| Question | → Use |
+| --- | --- |
+| Does each case do something different? | `switch` |
+| Do I want the linter to catch unhandled additions? | `switch` |
+| Do only 2–3 values need special handling? | `if/else` |
+| Would a new enum value require no change here? | `if/else` |
+| Does `default` duplicate another case? | Refactor to `if/else` |
+
+**Anti-pattern:** Using `switch` with a `default` that is byte-for-byte identical to
+one or more explicit cases (SonarQube S1871, Go Vet duplicate-case warnings). This
+signals the code doesn't actually need exhaustive dispatch — refactor to `if/else`.
+
+---
+
 <!-- PATTERN_COMPLETE -->
